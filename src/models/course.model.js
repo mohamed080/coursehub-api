@@ -1,4 +1,21 @@
-const mongoose = require("mongoose");
+﻿const mongoose = require("mongoose");
+
+const imageSchema = new mongoose.Schema(
+  {
+    url: {
+      type: String,
+      required: true,
+    },
+
+    publicId: {
+      type: String,
+      required: true,
+    },
+  },
+  {
+    _id: false,
+  },
+);
 
 const courseSchema = new mongoose.Schema(
   {
@@ -6,24 +23,15 @@ const courseSchema = new mongoose.Schema(
       type: String,
       required: [true, "Course title is required"],
       trim: true,
-      minlength: [
-        3,
-        "Course title must be at least 3 characters",
-      ],
-      maxlength: [
-        100,
-        "Course title cannot exceed 100 characters",
-      ],
+      minlength: [3, "Course title must be at least 3 characters"],
+      maxlength: [100, "Course title cannot exceed 100 characters"],
     },
 
     description: {
       type: String,
       required: [true, "Course description is required"],
       trim: true,
-      maxlength: [
-        2000,
-        "Course description cannot exceed 2000 characters",
-      ],
+      maxlength: [2000, "Course description cannot exceed 2000 characters"],
     },
 
     price: {
@@ -32,7 +40,14 @@ const courseSchema = new mongoose.Schema(
       min: [0, "Course price cannot be negative"],
     },
 
-    image: {
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: [true, "Course category is required"],
+      index: true,
+    },
+
+    coverImage: {
       url: {
         type: String,
         default: null,
@@ -44,6 +59,11 @@ const courseSchema = new mongoose.Schema(
       },
     },
 
+    gallery: {
+      type: [imageSchema],
+      default: [],
+    },
+
     instructor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -51,15 +71,20 @@ const courseSchema = new mongoose.Schema(
       index: true,
     },
 
-    isPublished: {
-      type: Boolean,
-      default: false,
+    status: {
+      type: String,
+      enum: {
+        values: ["draft", "published", "archived"],
+        message: "Invalid course status",
+      },
+      default: "draft",
+      index: true,
     },
   },
   {
     timestamps: true,
     versionKey: false,
-  }
+  },
 );
 
 courseSchema.index({

@@ -4,7 +4,11 @@ const coursesController = require("../controllers/courses.controller");
 const protect = require("../middleware/auth.middleware");
 const uploadImage = require("../middleware/upload.middleware");
 const validateRequest = require("../middleware/validation.middleware");
-const { createCourseValidation } = require("../validators/course.validator");
+const {
+  createCourseValidation,
+  updateCourseValidation,
+  courseIdValidation,
+} = require("../validators/course.validator");
 
 const router = express.Router();
 
@@ -13,23 +17,28 @@ router
   .get(coursesController.getAllCourses)
   .post(
     protect,
-    uploadImage.single("image"),
+    uploadImage.single("coverImage"),
     createCourseValidation,
     validateRequest,
-    coursesController.createCourse
+    coursesController.createCourse,
   );
 
 router
   .route("/:courseId")
-  .get(coursesController.getCourseById)
+  .get(courseIdValidation, validateRequest, coursesController.getCourseById)
   .patch(
     protect,
-    uploadImage.single("image"),
-    coursesController.updateMyCourse
+    uploadImage.single("coverImage"),
+    courseIdValidation,
+    updateCourseValidation,
+    validateRequest,
+    coursesController.updateMyCourse,
   )
   .delete(
     protect,
-    coursesController.deleteMyCourse
+    courseIdValidation,
+    validateRequest,
+    coursesController.deleteMyCourse,
   );
 
 module.exports = router;

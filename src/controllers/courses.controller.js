@@ -1,12 +1,39 @@
 const Course = require("../models/course.model");
+const Category = require("../models/category.model");
+
 const asyncWrapper = require("../middleware/asyncWrapper");
 const AppError = require("../utils/appError");
 const httpStatusText = require("../utils/httpStatusText");
-const {uploadBufferToCloudinary} = require("../utils/uploadToCloudinary");
+
+const { uploadBufferToCloudinary } = require("../utils/uploadToCloudinary");
 const cloudinary = require("../config/cloudinary");
 
+const deleteCloudinaryImage = async (publicId) => {
+  if (!publicId) {
+    return;
+  }
+
+  try {
+    await cloudinary.uploader.destroy(publicId);
+  } catch (error) {
+    console.error(
+      `Failed to delete Cloudinary image ${publicId}:`,
+      error.message,
+    );
+  }
+};
+
 const createCourse = asyncWrapper(async (req, res, next) => {
-  const { title, description, price } = req.body;
+  const { title, description, price, category: categoryId, status } = req.body;
+
+  const category = await Category.findOne({
+    _id: categoryId,
+    isActive: true,
+  });
+
+  if (!category) {
+    return next(new AppError("Category not found", 404, httpStatusText.FAIL));
+  }
 
   if (!title || !description || price === undefined) {
     return next(
@@ -18,14 +45,14 @@ const createCourse = asyncWrapper(async (req, res, next) => {
     );
   }
 
-  let uploadedImage = {
+  let coverImage = {
     url: null,
     publicId: null,
   };
 
   if (req.file) {
-    uploadedImage = await uploadBufferToCloudinary(req.file.buffer, {
-      folder: `company-api/courses/${req.user._id}`,
+    coverImage = await uploadBufferToCloudinary(req.file.buffer, {
+      folder: `company-api/courses/${req.user._id}/covers`,
       transformation: [
         {
           width: 1200,
@@ -44,11 +71,22 @@ const createCourse = asyncWrapper(async (req, res, next) => {
     title,
     description,
     price: Number(price),
-    image: uploadedImage,
+    category: category._id,
+    coverImage,
     instructor: req.user._id,
+    status: status || "draft",
   });
 
-  await course.populate("instructor", "firstName lastName email avatar");
+  await course.populate([
+    {
+      path: "instructor",
+      select: "firstName lastName email avatar",
+    },
+    {
+      path: "category",
+      select: "name slug description",
+    },
+  ]);
 
   res.status(201).json({
     status: httpStatusText.SUCCESS,
@@ -80,14 +118,41 @@ const getAllCourses = asyncWrapper(async (req, res) => {
     filter.instructor = req.query.instructor;
   }
 
-  if (req.query.isPublished !== undefined) {
-    filter.isPublished = req.query.isPublished === "true";
+  if (req.query.category) {
+    filter.category = req.query.category;
   }
+
+  if (req.query.status) {
+    filter.status = req.query.status;
+  }
+
+  if (req.query.minPrice !== undefined) {
+    filter.price = {
+      ...filter.price,
+      $gte: Number(req.query.minPrice),
+    };
+  }
+
+  if (req.query.maxPrice !== undefined) {
+    filter.price = {
+      ...filter.price,
+      $lte: Number(req.query.maxPrice),
+    };
+  }
+
+  const sortOptions = {
+    newest: { createdAt: -1 },
+    oldest: { createdAt: 1 },
+    "price-asc": { price: 1 },
+    "price-desc": { price: -1 },
+  };
+
+  const sort = sortOptions[req.query.sort] || sortOptions.newest;
 
   const [courses, totalCourses] = await Promise.all([
     Course.find(filter)
       .populate("instructor", "firstName lastName avatar")
-      .sort({ createdAt: -1 })
+      .sort(sort)
       .skip(skip)
       .limit(limit),
 
@@ -113,176 +178,145 @@ const getAllCourses = asyncWrapper(async (req, res) => {
   });
 });
 
-const getCourseById = asyncWrapper(
-  async (req, res, next) => {
-    const course = await Course.findById(
-      req.params.courseId
-    ).populate(
-      "instructor",
-      "firstName lastName email avatar"
-    );
+const getCourseById = asyncWrapper(async (req, res, next) => {
+  const course = await Course.findById(req.params.courseId)
+    .populate("instructor", "firstName lastName email avatar")
+    .populate("category", "name slug description");
 
-    if (!course) {
-      return next(
-        new AppError(
-          "Course not found",
-          404,
-          httpStatusText.FAIL
-        )
-      );
-    }
-
-    res.status(200).json({
-      status: httpStatusText.SUCCESS,
-      data: {
-        course,
-      },
-    });
+  if (!course) {
+    return next(new AppError("Course not found", 404, httpStatusText.FAIL));
   }
-);
 
-const updateMyCourse = asyncWrapper(
-  async (req, res, next) => {
-    const course = await Course.findById(
-      req.params.courseId
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    data: {
+      course,
+    },
+  });
+});
+
+const updateMyCourse = asyncWrapper(async (req, res, next) => {
+  const course = await Course.findById(req.params.courseId);
+
+  if (!course) {
+    return next(new AppError("Course not found", 404, httpStatusText.FAIL));
+  }
+
+  const isOwner = course.instructor.toString() === req.user._id.toString();
+
+  if (!isOwner && req.user.role !== "admin") {
+    return next(
+      new AppError("You cannot update this course", 403, httpStatusText.FAIL),
     );
+  }
 
-    if (!course) {
-      return next(
-        new AppError(
-          "Course not found",
-          404,
-          httpStatusText.FAIL
-        )
-      );
+  const allowedFields = ["title", "description", "price", "status"];
+
+  allowedFields.forEach((field) => {
+    if (req.body[field] !== undefined) {
+      course[field] =
+        field === "price" ? Number(req.body[field]) : req.body[field];
     }
+  });
 
-    const isOwner =
-      course.instructor.toString() ===
-      req.user._id.toString();
-
-    if (!isOwner && req.user.role !== "admin") {
-      return next(
-        new AppError(
-          "You cannot update this course",
-          403,
-          httpStatusText.FAIL
-        )
-      );
-    }
-
-    const allowedFields = [
-      "title",
-      "description",
-      "price",
-      "isPublished",
-    ];
-
-    allowedFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        course[field] = req.body[field];
-      }
+  if (req.body.category !== undefined) {
+    const category = await Category.findOne({
+      _id: req.body.category,
+      isActive: true,
     });
 
-    if (req.file) {
-      const newImage = await uploadBufferToCloudinary(
-        req.file.buffer,
-        {
-          folder: `company-api/courses/${req.user._id}`,
-          transformation: [
-            {
-              width: 1200,
-              height: 675,
-              crop: "fill",
-            },
-            {
-              quality: "auto",
-              fetch_format: "auto",
-            },
-          ],
-        }
+    if (!category) {
+      return next(
+        new AppError(
+          "Category not found or inactive",
+          400,
+          httpStatusText.FAIL,
+        ),
       );
-
-      const oldPublicId = course.image?.publicId;
-
-      course.image = newImage;
-
-      if (oldPublicId) {
-        try {
-          await cloudinary.uploader.destroy(oldPublicId);
-        } catch (error) {
-          console.error(
-            "Failed to delete old course image:",
-            error.message
-          );
-        }
-      }
     }
+
+    course.category = category._id;
+  }
+
+  if (req.file) {
+    const newCoverImage = await uploadBufferToCloudinary(req.file.buffer, {
+      folder: `company-api/courses/${req.user._id}/covers`,
+      transformation: [
+        {
+          width: 1200,
+          height: 675,
+          crop: "fill",
+        },
+        {
+          quality: "auto",
+          fetch_format: "auto",
+        },
+      ],
+    });
+
+    const oldPublicId = course.coverImage?.publicId;
+
+    course.coverImage = newCoverImage;
 
     await course.save();
 
-    res.status(200).json({
-      status: httpStatusText.SUCCESS,
-      message: "Course updated successfully",
-      data: {
-        course,
-      },
-    });
+    await deleteCloudinaryImage(oldPublicId);
+  } else {
+    await course.save();
   }
-);
 
-const deleteMyCourse = asyncWrapper(
-  async (req, res, next) => {
-    const course = await Course.findById(
-      req.params.courseId
+  await course.populate([
+    {
+      path: "instructor",
+      select: "firstName lastName email avatar",
+    },
+    {
+      path: "category",
+      select: "name slug description",
+    },
+  ]);
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    message: "Course updated successfully",
+    data: {
+      course,
+    },
+  });
+});
+
+const deleteMyCourse = asyncWrapper(async (req, res, next) => {
+  const course = await Course.findById(req.params.courseId);
+
+  if (!course) {
+    return next(new AppError("Course not found", 404, httpStatusText.FAIL));
+  }
+
+  const isOwner = course.instructor.toString() === req.user._id.toString();
+
+  if (!isOwner && req.user.role !== "admin") {
+    return next(
+      new AppError("You cannot delete this course", 403, httpStatusText.FAIL),
     );
-
-    if (!course) {
-      return next(
-        new AppError(
-          "Course not found",
-          404,
-          httpStatusText.FAIL
-        )
-      );
-    }
-
-    const isOwner =
-      course.instructor.toString() ===
-      req.user._id.toString();
-
-    if (!isOwner && req.user.role !== "admin") {
-      return next(
-        new AppError(
-          "You cannot delete this course",
-          403,
-          httpStatusText.FAIL
-        )
-      );
-    }
-
-    await course.deleteOne();
-
-    if (course.image?.publicId) {
-      try {
-        await cloudinary.uploader.destroy(
-          course.image.publicId
-        );
-      } catch (error) {
-        console.error(
-          "Failed to delete course image:",
-          error.message
-        );
-      }
-    }
-
-    res.status(200).json({
-      status: httpStatusText.SUCCESS,
-      message: "Course deleted successfully",
-      data: null,
-    });
   }
-);
+
+  const publicIds = [
+    course.coverImage?.publicId,
+    ...course.gallery.map((image) => image.publicId),
+  ].filter(Boolean);
+
+  await course.deleteOne();
+
+  await Promise.all(
+    publicIds.map((publicId) => deleteCloudinaryImage(publicId)),
+  );
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    message: "Course deleted successfully",
+    data: null,
+  });
+});
 
 module.exports = {
   createCourse,
