@@ -1,49 +1,24 @@
 const Course = require("../models/course.model");
-const Category = require("../models/category.model");
 
 const asyncWrapper = require("../middleware/asyncWrapper");
 const AppError = require("../utils/appError");
 const httpStatusText = require("../utils/httpStatusText");
 
 const { uploadBufferToCloudinary } = require("../utils/uploadToCloudinary");
-const cloudinary = require("../config/cloudinary");
+const {
+  checkCourseOwnership,
+  validateGalleryLimit,
+} = require("../helpers/course.helper");
 
-const deleteCloudinaryImage = async (publicId) => {
-  if (!publicId) {
-    return;
-  }
-
-  try {
-    await cloudinary.uploader.destroy(publicId);
-  } catch (error) {
-    console.error(
-      `Failed to delete Cloudinary image ${publicId}:`,
-      error.message,
-    );
-  }
-};
+const { deleteCloudinaryImage } = require("../helpers/cloudinary.helper");
+const getPagination = require("../helpers/pagination.helper");
+const { getActiveCategory } = require("../helpers/category.helper");
+const populateCourse = require("../helpers/coursePopulate.helper");
 
 const createCourse = asyncWrapper(async (req, res, next) => {
   const { title, description, price, category: categoryId, status } = req.body;
 
-  const category = await Category.findOne({
-    _id: categoryId,
-    isActive: true,
-  });
-
-  if (!category) {
-    return next(new AppError("Category not found", 404, httpStatusText.FAIL));
-  }
-
-  if (!title || !description || price === undefined) {
-    return next(
-      new AppError(
-        "Title, description and price are required",
-        400,
-        httpStatusText.FAIL,
-      ),
-    );
-  }
+  const category = await getActiveCategory(categoryId);
 
   let coverImage = {
     url: null,
@@ -52,7 +27,7 @@ const createCourse = asyncWrapper(async (req, res, next) => {
 
   if (req.file) {
     coverImage = await uploadBufferToCloudinary(req.file.buffer, {
-      folder: `company-api/courses/${req.user._id}/covers`,
+      folder: `coursehub/courses/${req.user._id}/covers`,
       transformation: [
         {
           width: 1200,
@@ -77,16 +52,7 @@ const createCourse = asyncWrapper(async (req, res, next) => {
     status: status || "draft",
   });
 
-  await course.populate([
-    {
-      path: "instructor",
-      select: "firstName lastName email avatar",
-    },
-    {
-      path: "category",
-      select: "name slug description",
-    },
-  ]);
+  await populateCourse(course);
 
   res.status(201).json({
     status: httpStatusText.SUCCESS,
@@ -98,13 +64,7 @@ const createCourse = asyncWrapper(async (req, res, next) => {
 });
 
 const getAllCourses = asyncWrapper(async (req, res) => {
-  const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1);
-
-  const requestedLimit = Number.parseInt(req.query.limit, 10) || 10;
-
-  const limit = Math.min(Math.max(requestedLimit, 1), 100);
-
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = getPagination(req.query);
 
   const filter = {};
 
@@ -152,6 +112,7 @@ const getAllCourses = asyncWrapper(async (req, res) => {
   const [courses, totalCourses] = await Promise.all([
     Course.find(filter)
       .populate("instructor", "firstName lastName avatar")
+      .populate("category", "name slug description")
       .sort(sort)
       .skip(skip)
       .limit(limit),
@@ -179,13 +140,13 @@ const getAllCourses = asyncWrapper(async (req, res) => {
 });
 
 const getCourseById = asyncWrapper(async (req, res, next) => {
-  const course = await Course.findById(req.params.courseId)
-    .populate("instructor", "firstName lastName email avatar")
-    .populate("category", "name slug description");
+  const course = await Course.findById(req.params.courseId);
 
   if (!course) {
     return next(new AppError("Course not found", 404, httpStatusText.FAIL));
   }
+
+  await populateCourse(course);
 
   res.status(200).json({
     status: httpStatusText.SUCCESS,
@@ -202,13 +163,7 @@ const updateMyCourse = asyncWrapper(async (req, res, next) => {
     return next(new AppError("Course not found", 404, httpStatusText.FAIL));
   }
 
-  const isOwner = course.instructor.toString() === req.user._id.toString();
-
-  if (!isOwner && req.user.role !== "admin") {
-    return next(
-      new AppError("You cannot update this course", 403, httpStatusText.FAIL),
-    );
-  }
+  checkCourseOwnership(course, req.user);
 
   const allowedFields = ["title", "description", "price", "status"];
 
@@ -220,27 +175,14 @@ const updateMyCourse = asyncWrapper(async (req, res, next) => {
   });
 
   if (req.body.category !== undefined) {
-    const category = await Category.findOne({
-      _id: req.body.category,
-      isActive: true,
-    });
-
-    if (!category) {
-      return next(
-        new AppError(
-          "Category not found or inactive",
-          400,
-          httpStatusText.FAIL,
-        ),
-      );
-    }
+    const category = await getActiveCategory(req.body.category);
 
     course.category = category._id;
   }
 
   if (req.file) {
     const newCoverImage = await uploadBufferToCloudinary(req.file.buffer, {
-      folder: `company-api/courses/${req.user._id}/covers`,
+      folder: `coursehub/courses/${req.user._id}/covers`,
       transformation: [
         {
           width: 1200,
@@ -265,16 +207,7 @@ const updateMyCourse = asyncWrapper(async (req, res, next) => {
     await course.save();
   }
 
-  await course.populate([
-    {
-      path: "instructor",
-      select: "firstName lastName email avatar",
-    },
-    {
-      path: "category",
-      select: "name slug description",
-    },
-  ]);
+  await populateCourse(course);
 
   res.status(200).json({
     status: httpStatusText.SUCCESS,
@@ -292,17 +225,13 @@ const deleteMyCourse = asyncWrapper(async (req, res, next) => {
     return next(new AppError("Course not found", 404, httpStatusText.FAIL));
   }
 
-  const isOwner = course.instructor.toString() === req.user._id.toString();
+  checkCourseOwnership(course, req.user);
 
-  if (!isOwner && req.user.role !== "admin") {
-    return next(
-      new AppError("You cannot delete this course", 403, httpStatusText.FAIL),
-    );
-  }
+  const galleryImages = course.gallery || [];
 
   const publicIds = [
     course.coverImage?.publicId,
-    ...course.gallery.map((image) => image.publicId),
+    ...galleryImages.map((image) => image.publicId),
   ].filter(Boolean);
 
   await course.deleteOne();
@@ -318,10 +247,175 @@ const deleteMyCourse = asyncWrapper(async (req, res, next) => {
   });
 });
 
+const addCourseGalleryImage = asyncWrapper(async (req, res, next) => {
+  const course = await Course.findById(req.params.courseId);
+
+  if (!course) {
+    return next(new AppError("Course not found", 404, httpStatusText.FAIL));
+  }
+
+  checkCourseOwnership(course, req.user);
+
+  if (!req.files || req.files.length === 0) {
+    return next(
+      new AppError(
+        "Please upload at least one image",
+        400,
+        httpStatusText.FAIL,
+      ),
+    );
+  }
+
+  validateGalleryLimit(course, req.files.length);
+
+  let uploadedImages = [];
+
+  try {
+    uploadedImages = await Promise.all(
+      req.files.map((file) =>
+        uploadBufferToCloudinary(file.buffer, {
+          folder: `coursehub/courses/${course._id}/gallery`,
+          transformation: [
+            {
+              width: 1200,
+              height: 675,
+              crop: "fill",
+            },
+            {
+              quality: "auto",
+              fetch_format: "auto",
+            },
+          ],
+        }),
+      ),
+    );
+
+    course.gallery.push(...uploadedImages);
+
+    await course.save();
+  } catch (error) {
+    await Promise.all(
+      uploadedImages.map((image) => deleteCloudinaryImage(image.publicId)),
+    );
+    throw error;
+  }
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    message: "Course gallery images added successfully",
+    results: uploadedImages.length,
+    data: {
+      gallery: course.gallery,
+    },
+  });
+});
+
+const deleteCourseGalleryImage = asyncWrapper(async (req, res, next) => {
+  const { courseId, imageId } = req.params;
+
+  const course = await Course.findById(courseId);
+
+  if (!course) {
+    return next(new AppError("Course not found", 404, httpStatusText.FAIL));
+  }
+
+  checkCourseOwnership(course, req.user);
+
+  const galleryImage = course.gallery.id(imageId);
+
+  if (!galleryImage) {
+    return next(
+      new AppError("Gallery image not found", 404, httpStatusText.FAIL),
+    );
+  }
+
+  const publicId = galleryImage.publicId;
+
+  galleryImage.deleteOne();
+
+  await course.save();
+
+  await deleteCloudinaryImage(publicId);
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    message: "Gallery image deleted successfully",
+    data: {
+      gallery: course.gallery,
+    },
+  });
+});
+
+const clearCourseGallery = asyncWrapper(async (req, res, next) => {
+  const course = await Course.findById(req.params.courseId);
+
+  if (!course) {
+    return next(new AppError("Course not found", 404, httpStatusText.FAIL));
+  }
+
+  checkCourseOwnership(course, req.user);
+
+  if (course.gallery.length === 0) {
+    return res.status(200).json({
+      status: httpStatusText.SUCCESS,
+      message: "Course gallery is already empty",
+      data: {
+        gallery: [],
+      },
+    });
+  }
+
+  const publicIds = course.gallery
+    .map((image) => image.publicId)
+    .filter(Boolean);
+
+  course.gallery = [];
+
+  await course.save();
+
+  await Promise.all(
+    publicIds.map((publicId) => deleteCloudinaryImage(publicId)),
+  );
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    message: "Course gallery cleared successfully",
+    data: {
+      gallery: [],
+    },
+  });
+});
+
+const getCourseGallery = asyncWrapper(async (req, res, next) => {
+  const course = await Course.findById(req.params.courseId).select(
+    "title coverImage gallery",
+  );
+
+  if (!course) {
+    return next(new AppError("Course not found", 404, httpStatusText.FAIL));
+  }
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    results: course.gallery.length,
+    data: {
+      courseId: course._id,
+      title: course.title,
+      coverImage: course.coverImage,
+      gallery: course.gallery,
+    },
+  });
+});
+
 module.exports = {
   createCourse,
   getAllCourses,
   getCourseById,
   updateMyCourse,
   deleteMyCourse,
+
+  getCourseGallery,
+  addCourseGalleryImage,
+  deleteCourseGalleryImage,
+  clearCourseGallery,
 };

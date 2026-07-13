@@ -62,6 +62,12 @@ const courseSchema = new mongoose.Schema(
     gallery: {
       type: [imageSchema],
       default: [],
+      validate: {
+        validator:(images) => {
+          return images.length <= 10;
+        },
+        message: "Course gallery cannot have more than 10 images",
+      }
     },
 
     instructor: {
