@@ -10,6 +10,11 @@ const {
   courseIdValidation,
 } = require("../validators/course.validator");
 
+const {
+  courseGalleryParamsValidation,
+  galleryImageParamsValidation,
+} = require("../validators/gallery.validator");
+
 const router = express.Router();
 
 router
@@ -40,5 +45,34 @@ router
     validateRequest,
     coursesController.deleteMyCourse,
   );
+
+router
+  .route("/:courseId/gallery")
+  .get(
+  courseGalleryParamsValidation,
+  validateRequest,
+  coursesController.getCourseGallery,
+)
+.post(
+  protect,
+  uploadImage.array("gallery", 10),
+  courseGalleryParamsValidation,
+  validateRequest,
+  coursesController.addCourseGalleryImage,
+)
+.delete(
+  protect,
+  courseGalleryParamsValidation,
+  validateRequest,
+  coursesController.clearCourseGallery,
+);
+
+router.delete(
+  "/:courseId/gallery/:imageId",
+  protect,
+  galleryImageParamsValidation,
+  validateRequest,
+  coursesController.deleteCourseGalleryImage,
+);
 
 module.exports = router;

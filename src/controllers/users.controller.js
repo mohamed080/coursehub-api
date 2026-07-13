@@ -4,15 +4,10 @@ const AppError = require("../utils/appError");
 const httpStatusText = require("../utils/httpStatusText");
 const cloudinary = require("../config/cloudinary");
 const { uploadBufferToCloudinary } = require("../utils/uploadToCloudinary");
+const getPagination = require("../helpers/pagination.helper");
 
 const getAllUsers = asyncWrapper(async (req, res) => {
-  const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1);
-
-  const requestedLimit = Number.parseInt(req.query.limit, 10) || 10;
-
-  const limit = Math.min(Math.max(requestedLimit, 1), 100);
-
-  const skip = (page - 1) * limit;
+  const { page, limit, skip } = getPagination(req.query);
 
   const filter = {};
 
