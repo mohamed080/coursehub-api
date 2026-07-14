@@ -63,11 +63,25 @@ const courseSchema = new mongoose.Schema(
       type: [imageSchema],
       default: [],
       validate: {
-        validator:(images) => {
+        validator: (images) => {
           return images.length <= 10;
         },
         message: "Course gallery cannot have more than 10 images",
-      }
+      },
+    },
+
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: [0, "Average rating cannot be less than 0"],
+      max: [5, "Average rating cannot exceed 5"],
+      set: (value) => Math.round(value * 10) / 10,
+    },
+
+    ratingsCount: {
+      type: Number,
+      default: 0,
+      min: [0, "Ratings count cannot be negative"],
     },
 
     instructor: {

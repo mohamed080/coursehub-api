@@ -8,6 +8,7 @@ const usersRoutes = require("./routes/users.routes");
 const coursesRoutes = require("./routes/courses.routes");
 const categoriesRoutes = require("./routes/categories.routes");
 const enrollmentsRoutes = require("./routes/enrollments.routes");
+const reviewsRoutes = require("./routes/reviews.routes");
 
 const notFound = require("./middleware/notFound.middleware");
 const globalErrorHandler = require("./middleware/error.middleware");
@@ -42,6 +43,7 @@ app.use("/api/users", usersRoutes);
 app.use("/api/courses", coursesRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/enrollments", enrollmentsRoutes);
+app.use("/api/reviews", reviewsRoutes);
 
 app.use(notFound);
 app.use(globalErrorHandler);
