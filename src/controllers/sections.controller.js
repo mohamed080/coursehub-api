@@ -1,5 +1,6 @@
 const Section = require("../models/section.model");
 const Course = require("../models/course.model");
+const Lesson = require("../models/lesson.model");
 
 const asyncWrapper = require("../middleware/asyncWrapper");
 const AppError = require("../utils/appError");
@@ -8,6 +9,8 @@ const httpStatusText = require("../utils/httpStatusText");
 const getPagination = require("../helpers/pagination.helper");
 
 const { checkCourseOwnership } = require("../helpers/course.helper");
+
+const { deleteCloudinaryVideo } = require("../helpers/cloudinary.helper");
 
 // access  Course owner or admin
 const createSection = asyncWrapper(async (req, res, next) => {
@@ -245,11 +248,27 @@ const deleteSection = asyncWrapper(async (req, res, next) => {
 
   checkCourseOwnership(course, req.user);
 
+  const lessons = await Lesson.find({
+    section: section._id,
+  }).select("video.publicId");
+
+  const videoPublicIds = lessons
+    .map((lesson) => lesson.video?.publicId)
+    .filter(Boolean);
+
+  await Lesson.deleteMany({
+    section: section._id,
+  });
+
   await section.deleteOne();
+
+  await Promise.all(
+    videoPublicIds.map((publicId) => deleteCloudinaryVideo(publicId)),
+  );
 
   res.status(200).json({
     status: httpStatusText.SUCCESS,
-    message: "Section deleted successfully",
+    message: "Section and its lessons deleted successfully",
     data: null,
   });
 });
