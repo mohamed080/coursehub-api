@@ -1,6 +1,7 @@
 const Lesson = require("../models/lesson.model");
 const Section = require("../models/section.model");
 const Course = require("../models/course.model");
+const Progress = require("../models/progress.model");
 
 const asyncWrapper = require("../middleware/asyncWrapper");
 const AppError = require("../utils/appError");
@@ -371,6 +372,8 @@ const deleteLesson = asyncWrapper(async (req, res, next) => {
   checkCourseOwnership(course, req.user);
 
   const videoPublicId = lesson.video?.publicId;
+
+  await Progress.deleteMany({ lesson: lesson._id });
 
   await lesson.deleteOne();
 
