@@ -88,6 +88,16 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
   * Average course rating
   * Total ratings count
 
+### Wishlist
+
+- Add courses to the current user's wishlist
+- Remove courses from the wishlist
+- View the current user's wishlist
+- Check if a course is already wishlisted
+- Clear the entire wishlist
+- Prevent duplicate wishlist entries
+- Search and pagination
+
 ### File Uploads
 
 * Multer memory storage
@@ -383,6 +393,16 @@ GET /api/reviews/courses/:courseId?sort=rating-high
 GET /api/reviews/courses/:courseId?sort=rating-low
 ```
 
+### Wishlist
+
+```text
+POST   /api/wishlist/:courseId
+GET    /api/wishlist/me
+GET    /api/wishlist/:courseId/status
+DELETE /api/wishlist/:courseId
+DELETE /api/wishlist/me
+```
+
 ## File Uploads
 
 File upload requests must use:
@@ -483,7 +503,8 @@ coursehub-api/
 │   │   ├── categories.controller.js
 │   │   ├── courses.controller.js
 │   │   ├── enrollments.controller.js
-│   │   └── reviews.controller.js
+│   │   ├── reviews.controller.js
+│   │   └── wishlist.controller.js
 │   │
 │   ├── helpers/
 │   │   ├── category.helper.js
@@ -507,7 +528,8 @@ coursehub-api/
 │   │   ├── category.model.js
 │   │   ├── course.model.js
 │   │   ├── enrollment.model.js
-│   │   └── review.model.js
+│   │   ├── review.model.js
+│   │   └── wishlist.model.js
 │   │
 │   ├── routes/
 │   │   ├── auth.routes.js
@@ -515,7 +537,8 @@ coursehub-api/
 │   │   ├── categories.routes.js
 │   │   ├── courses.routes.js
 │   │   ├── enrollments.routes.js
-│   │   └── reviews.routes.js
+│   │   ├─── reviews.routes.js
+│   │   └── wishlist.routes.js
 │   │
 │   ├── utils/
 │   │   ├── appError.js
@@ -528,7 +551,8 @@ coursehub-api/
 │   │   ├── course.validator.js
 │   │   ├── enrollment.validator.js
 │   │   ├── gallery.validator.js
-│   │   └── review.validator.js
+│   │   ├── review.validator.js
+│   │   └── wishlist.validator.js
 │   │
 │   └── app.js
 │
@@ -554,6 +578,10 @@ coursehub-api/
 * Instructors cannot review their own courses.
 * A user may submit only one review per course.
 * Course ratings are recalculated automatically after review changes.
+- Only published courses can be added to a wishlist.
+- Users cannot add the same course to their wishlist more than once.
+- Users cannot add their own courses to their wishlist.
+- Wishlist is available for all authenticated users.
 
 ## Security Notes
 
@@ -569,7 +597,6 @@ coursehub-api/
 
 ## Planned Features
 
-* Wishlist management
 * Course sections and lessons
 * Learning progress tracking
 * Course completion certificates
