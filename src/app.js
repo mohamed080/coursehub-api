@@ -13,6 +13,7 @@ const wishlistRoutes = require("./routes/wishlist.routes");
 const sectionsRoutes = require("./routes/sections.routes");
 const lessonsRoutes = require("./routes/lessons.routes");
 const progressRoutes = require("./routes/progress.routes");
+const certificatesRoutes = require("./routes/certificates.routes");
 
 const notFound = require("./middleware/notFound.middleware");
 const globalErrorHandler = require("./middleware/error.middleware");
@@ -52,6 +53,7 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api", sectionsRoutes);
 app.use("/api", lessonsRoutes);
 app.use("/api", progressRoutes);
+app.use("/api/certificates", certificatesRoutes);
 
 app.use(notFound);
 app.use(globalErrorHandler);
