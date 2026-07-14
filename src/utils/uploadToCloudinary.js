@@ -7,56 +7,53 @@ const uploadBufferToCloudinary = (fileBuffer, options = {}) => {
     }
 
     let settled = false;
-    const timeoutMs = options.timeoutMs || 30000;
 
-    const timeout = setTimeout(() => {
-      if (settled) {
-        return;
-      }
+    const resolveOnce = (value) => {
+      if (settled) return;
 
       settled = true;
-      uploadStream.destroy();
-      reject(new Error("Cloudinary upload timed out"));
-    }, timeoutMs);
+      resolve(value);
+    };
+
+    const rejectOnce = (error) => {
+      if (settled) return;
+
+      settled = true;
+      reject(error);
+    };
 
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: options.folder || "coursehub/uploads",
-        resource_type: "image",
+        resource_type: options.resourceType || "image",
         transformation: options.transformation,
       },
       (error, result) => {
-        if (settled) {
-          return;
-        }
-
-        settled = true;
-        clearTimeout(timeout);
-
         if (error) {
-          return reject(error);
+          return rejectOnce(error);
         }
 
         if (!result) {
-          return reject(new Error("Cloudinary returned no upload result"));
+          return rejectOnce(
+            new Error("Cloudinary returned an empty upload result"),
+          );
         }
 
-        resolve({
+        resolveOnce({
           url: result.secure_url,
           publicId: result.public_id,
+          resourceType: result.resource_type,
+          format: result.format,
+          duration: result.duration || null,
+          bytes: result.bytes || null,
+          width: result.width || null,
+          height: result.height || null,
         });
-      }
+      },
     );
 
-    uploadStream.on("error", (error) => {
-      if (settled) {
-        return;
-      }
+    uploadStream.on("error", rejectOnce);
 
-      settled = true;
-      clearTimeout(timeout);
-      reject(error);
-    });
     uploadStream.end(fileBuffer);
   });
 };
