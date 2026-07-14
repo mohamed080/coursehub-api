@@ -98,6 +98,38 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
 - Prevent duplicate wishlist entries
 - Search and pagination
 
+### Sections
+
+- Create, update, and delete course sections
+- Order sections within a course
+- Only course owners and admins can manage sections
+- Automatically remove lessons when deleting a section
+
+### Lessons
+
+- Create, update, and delete lessons
+- Video upload to Cloudinary
+- Preview lessons
+- Lesson ordering
+- Automatic Cloudinary video cleanup
+- Only instructors and admins can manage lessons
+
+### Progress Tracking
+
+- Mark lessons as completed
+- Remove lesson completion
+- Track course completion percentage
+- Enrollment progress synchronization
+- Course completion detection
+
+### Certificates
+
+- Generate course completion certificates
+- Unique verification code
+- Public certificate verification
+- Student certificate history
+- Admin revoke and restore certificates
+
 ### File Uploads
 
 * Multer memory storage
@@ -403,6 +435,47 @@ DELETE /api/wishlist/:courseId
 DELETE /api/wishlist/me
 ```
 
+### Sections
+
+```text
+GET    /api/courses/:courseId/sections
+POST   /api/courses/:courseId/sections
+PATCH  /api/sections/:sectionId
+DELETE /api/sections/:sectionId
+```
+
+
+### Lessons
+
+```text
+GET    /api/sections/:sectionId/lessons
+GET    /api/lessons/:lessonId
+POST   /api/sections/:sectionId/lessons
+PATCH  /api/lessons/:lessonId
+DELETE /api/lessons/:lessonId
+```
+
+### Progress
+
+```text
+POST   /api/lessons/:lessonId/complete
+DELETE /api/lessons/:lessonId/complete
+GET    /api/lessons/:lessonId/complete/status
+GET    /api/courses/:courseId/progress
+```
+
+### Certificates
+
+```text
+POST   /api/certificates/courses/:courseId
+GET    /api/certificates/me
+GET    /api/certificates/:certificateId
+GET    /api/certificates/verify/:verificationCode
+GET    /api/certificates
+PATCH  /api/certificates/:certificateId/revoke
+PATCH  /api/certificates/:certificateId/restore
+```
+
 ## File Uploads
 
 File upload requests must use:
@@ -486,7 +559,29 @@ Maximum file size:
 5 MB per image
 ```
 
+### Upload Lesson Video
+
+```text
+POST /api/sections/:sectionId/lessons
+PATCH /api/lessons/:lessonId
+```
+
+Field name:
+
+```text
+video
+```
+
+Supported video types
+
+- mp4
+- mov
+- avi
+- mkv
+- webm
+
 Do not manually add the `Content-Type` header in Postman. Postman automatically generates the correct multipart boundary.
+
 
 ## Project Structure
 
@@ -504,7 +599,11 @@ coursehub-api/
 │   │   ├── courses.controller.js
 │   │   ├── enrollments.controller.js
 │   │   ├── reviews.controller.js
-│   │   └── wishlist.controller.js
+│   │   ├── wishlist.controller.js
+│   │   ├── certificates.controller.js
+│   │   ├── lessons.controller.js
+│   │   ├── progress.controller.js
+│   │   └── sections.controller.js
 │   │
 │   ├── helpers/
 │   │   ├── category.helper.js
@@ -512,7 +611,10 @@ coursehub-api/
 │   │   ├── course.helper.js
 │   │   ├── coursePopulate.helper.js
 │   │   ├── pagination.helper.js
-│   │   └── review.helper.js
+│   │   ├── review.helper.js
+│   │   ├── certificate.helper.js
+│   │   ├── progress.helper.js
+│   │   └── section.helper.js
 │   │
 │   ├── middleware/
 │   │   ├── asyncWrapper.js
@@ -529,7 +631,11 @@ coursehub-api/
 │   │   ├── course.model.js
 │   │   ├── enrollment.model.js
 │   │   ├── review.model.js
-│   │   └── wishlist.model.js
+│   │   ├── wishlist.model.js
+│   │   ├── certificate.model.js
+│   │   ├── lesson.model.js
+│   │   ├── progress.model.js
+│   │   └── section.model.js
 │   │
 │   ├── routes/
 │   │   ├── auth.routes.js
@@ -537,8 +643,12 @@ coursehub-api/
 │   │   ├── categories.routes.js
 │   │   ├── courses.routes.js
 │   │   ├── enrollments.routes.js
-│   │   ├─── reviews.routes.js
-│   │   └── wishlist.routes.js
+│   │   ├── reviews.routes.js
+│   │   ├── wishlist.routes.js
+│   │   ├── certificates.routes.js
+│   │   ├── lessons.routes.js
+│   │   ├── progress.routes.js
+│   │   └── sections.routes.js
 │   │
 │   ├── utils/
 │   │   ├── appError.js
@@ -552,7 +662,11 @@ coursehub-api/
 │   │   ├── enrollment.validator.js
 │   │   ├── gallery.validator.js
 │   │   ├── review.validator.js
-│   │   └── wishlist.validator.js
+│   │   ├── wishlist.validator.js
+│   │   ├── certificate.validator.js
+│   │   ├── lesson.validator.js
+│   │   ├── progress.validator.js
+│   │   └── section.validator.js
 │   │
 │   └── app.js
 │
@@ -582,6 +696,15 @@ coursehub-api/
 - Users cannot add the same course to their wishlist more than once.
 - Users cannot add their own courses to their wishlist.
 - Wishlist is available for all authenticated users.
+- Courses contain ordered sections.
+- Sections contain ordered lessons.
+- Lessons may be preview or protected.
+- Students must enroll before tracking progress.
+- Completing every lesson marks the enrollment as completed.
+- Only one completion record exists per lesson and student.
+- Certificates are generated only after completing a course.
+- Each student receives only one certificate per course.
+- Certificates can be publicly verified.
 
 ## Security Notes
 
@@ -597,13 +720,11 @@ coursehub-api/
 
 ## Planned Features
 
-* Course sections and lessons
-* Learning progress tracking
-* Course completion certificates
 * Notifications
 * Admin dashboard statistics
 * Password reset flow
 * Refresh tokens
+* Email verification
 * Swagger API documentation
 * Unit and integration tests
 * Docker support
