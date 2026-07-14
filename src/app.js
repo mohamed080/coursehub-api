@@ -12,6 +12,7 @@ const reviewsRoutes = require("./routes/reviews.routes");
 const wishlistRoutes = require("./routes/wishlist.routes");
 const sectionsRoutes = require("./routes/sections.routes");
 const lessonsRoutes = require("./routes/lessons.routes");
+const progressRoutes = require("./routes/progress.routes");
 
 const notFound = require("./middleware/notFound.middleware");
 const globalErrorHandler = require("./middleware/error.middleware");
@@ -24,7 +25,7 @@ app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:3000",
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json({ limit: "10kb" }));
@@ -50,6 +51,7 @@ app.use("/api/reviews", reviewsRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api", sectionsRoutes);
 app.use("/api", lessonsRoutes);
+app.use("/api", progressRoutes);
 
 app.use(notFound);
 app.use(globalErrorHandler);

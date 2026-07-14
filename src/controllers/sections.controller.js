@@ -1,6 +1,7 @@
 const Section = require("../models/section.model");
 const Course = require("../models/course.model");
 const Lesson = require("../models/lesson.model");
+const Progress = require("../models/progress.model");
 
 const asyncWrapper = require("../middleware/asyncWrapper");
 const AppError = require("../utils/appError");
@@ -250,15 +251,27 @@ const deleteSection = asyncWrapper(async (req, res, next) => {
 
   const lessons = await Lesson.find({
     section: section._id,
-  }).select("video.publicId");
+  }).select("_id video.publicId");
+
+  const lessonIds = lessons.map((lesson) => lesson._id);
 
   const videoPublicIds = lessons
     .map((lesson) => lesson.video?.publicId)
     .filter(Boolean);
 
-  await Lesson.deleteMany({
-    section: section._id,
-  });
+  if (lessonIds.length > 0) {
+    await Progress.deleteMany({
+      lesson: {
+        $in: lessonIds,
+      },
+    });
+
+    await Lesson.deleteMany({
+      _id: {
+        $in: lessonIds,
+      },
+    });
+  }
 
   await section.deleteOne();
 
