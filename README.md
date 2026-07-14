@@ -1,67 +1,184 @@
 ﻿# CourseHub API
 
-A Node.js and Express REST API for authentication, user profile management, course management, MongoDB persistence, and Cloudinary image uploads.
+A scalable RESTful API for an online learning platform built with Node.js, Express.js, MongoDB, JWT authentication, role-based authorization, Cloudinary image uploads, enrollments, and course reviews.
 
 ## Features
 
-- User registration, login, and JWT authentication
-- Current-user profile, password, avatar, and account management
-- Admin user listing, user lookup, role update, and deletion
-- Course create, read, update, and delete endpoints
-- Course image and user avatar uploads with Multer memory storage
-- Cloudinary upload integration
-- MongoDB models with Mongoose
-- Centralized error handling and request validation
+### Authentication
+
+* User registration and login
+* JWT-based authentication
+* Get current authenticated user
+* Protected routes
+* Role-based authorization for users and admins
+
+### User Management
+
+* Update current-user profile
+* Change password
+* Upload, replace, and remove profile avatar
+* Deactivate current-user account
+* Admin user listing with pagination and search
+* Admin user lookup
+* Admin role management
+* Admin user deletion
+
+### Categories
+
+* Create, read, update, and delete categories
+* Category slug generation
+* Category activation and deactivation
+* Search and pagination
+* Prevent deleting categories that contain courses
+* Associate courses with active categories
+
+### Courses
+
+* Create, read, update, and delete courses
+* Associate courses with instructors and categories
+* Course status management:
+
+  * `draft`
+  * `published`
+  * `archived`
+* Course ownership authorization
+* Admin course management
+* Course search
+* Filter by category, instructor, status, and price
+* Sort by newest, oldest, and price
+* Pagination
+* Cover image upload and replacement
+* Automatic Cloudinary cleanup when replacing or deleting images
+
+### Course Gallery
+
+* Upload multiple gallery images
+* Maximum of 10 images per course
+* Retrieve a course gallery
+* Delete a single gallery image
+* Clear the entire course gallery
+* Course owner and admin permission checks
+* Automatic Cloudinary cleanup
+
+### Enrollments
+
+* Enroll in published courses
+* Prevent duplicate enrollments
+* Prevent instructors from enrolling in their own courses
+* Retrieve the current user's enrollments
+* Filter enrollments by status
+* Check enrollment status for a course
+* Cancel enrollment
+* Instructor and admin access to enrolled students
+* Remove a student enrollment
+* Pagination for enrollment results
+
+### Reviews and Ratings
+
+* Only enrolled users can review a course
+* Prevent instructors from reviewing their own courses
+* One review per user per course
+* Rating from 1 to 5
+* Create, update, and delete reviews
+* Retrieve all reviews for a course
+* Retrieve the current user's reviews
+* Sort reviews by date or rating
+* Automatically calculate:
+
+  * Average course rating
+  * Total ratings count
+
+### File Uploads
+
+* Multer memory storage
+* Cloudinary integration
+* User avatar upload
+* Course cover image upload
+* Multiple course gallery image uploads
+* File type validation
+* Maximum upload size of 5 MB
+
+### API Quality
+
+* Mongoose validation
+* Express Validator request validation
+* Centralized error handling
+* Async controller wrapper
+* Pagination helpers
+* Reusable authorization and Cloudinary helpers
+* Duplicate database constraint handling
+* Security middleware with Helmet and CORS
+* Development request logging with Morgan
 
 ## Tech Stack
 
-- Node.js
-- Express
-- MongoDB and Mongoose
-- JWT
-- bcryptjs
-- Multer
-- Cloudinary
-- Helmet, CORS, Morgan
+* Node.js
+* Express.js
+* MongoDB
+* Mongoose
+* JSON Web Token
+* bcryptjs
+* Multer
+* Cloudinary
+* express-validator
+* Helmet
+* CORS
+* Morgan
+* dotenv
+* slugify
 
 ## Getting Started
 
-### 1. Install dependencies
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/mohamed080/coursehub-api.git
+cd coursehub-api
+```
+
+### 2. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Create environment file
+### 3. Create the environment file
 
-Copy `.env.example` to `.env` and fill in your real values:
+Copy `.env.example` to `.env`.
+
+Linux or macOS:
 
 ```bash
 cp .env.example .env
 ```
 
-On Windows PowerShell:
+Windows PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Required environment variables:
+Add your environment values:
 
 ```env
 NODE_ENV=development
 PORT=3001
+
 MONGODB_URL=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
+
+JWT_SECRET=your_secure_jwt_secret
 JWT_EXPIRES_IN=1d
+
 CLIENT_URL=http://localhost:3000
+
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
+
 DEFAULT_USER_IMAGE=https://res.cloudinary.com/your-cloud/image/upload/default-user.png
 ```
 
-### 3. Run the server
+### 4. Run the server
 
 Development:
 
@@ -81,9 +198,25 @@ Default local URL:
 http://localhost:3001
 ```
 
+Health check:
+
+```text
+GET /api/health
+```
+
+## Authentication
+
+Protected routes require a bearer token:
+
+```text
+Authorization: Bearer <token>
+```
+
+The access token is returned from the register and login endpoints.
+
 ## API Routes
 
-### Auth
+### Authentication
 
 ```text
 POST /api/auth/register
@@ -99,6 +232,7 @@ Authenticated user routes:
 PATCH  /api/users/me
 PATCH  /api/users/me/password
 DELETE /api/users/me
+
 PATCH  /api/users/me/avatar
 DELETE /api/users/me/avatar
 ```
@@ -112,72 +246,342 @@ PATCH  /api/users/:userId/role
 DELETE /api/users/:userId
 ```
 
-### Courses
+### Categories
+
+Public routes:
 
 ```text
-GET    /api/courses
+GET /api/categories
+GET /api/categories/:identifier
+```
+
+Admin routes:
+
+```text
+POST   /api/categories
+PATCH  /api/categories/:categoryId
+DELETE /api/categories/:categoryId
+```
+
+A category may be retrieved using its MongoDB ID or slug.
+
+Example:
+
+```text
+GET /api/categories/web-development
+```
+
+### Courses
+
+Public routes:
+
+```text
+GET /api/courses
+GET /api/courses/:courseId
+```
+
+Protected routes:
+
+```text
 POST   /api/courses
-GET    /api/courses/:courseId
 PATCH  /api/courses/:courseId
 DELETE /api/courses/:courseId
 ```
 
+Course owners may update or delete their own courses. Admins may manage any course.
+
+Example filters:
+
+```text
+GET /api/courses?search=node
+GET /api/courses?category=<categoryId>
+GET /api/courses?status=published
+GET /api/courses?minPrice=100&maxPrice=500
+GET /api/courses?sort=price-asc
+GET /api/courses?page=1&limit=10
+```
+
+Supported sort options:
+
+```text
+newest
+oldest
+price-asc
+price-desc
+```
+
+### Course Gallery
+
+```text
+GET    /api/courses/:courseId/gallery
+POST   /api/courses/:courseId/gallery
+DELETE /api/courses/:courseId/gallery
+DELETE /api/courses/:courseId/gallery/:imageId
+```
+
+Only the course owner or an admin may add or remove gallery images.
+
+### Enrollments
+
+Current-user routes:
+
+```text
+POST   /api/enrollments/:courseId
+GET    /api/enrollments/me
+GET    /api/enrollments/:courseId/status
+DELETE /api/enrollments/:courseId
+```
+
+Instructor and admin routes:
+
+```text
+GET    /api/enrollments/:courseId/students
+DELETE /api/enrollments/:courseId/students/:enrollmentId
+```
+
+Example filters:
+
+```text
+GET /api/enrollments/me?status=active
+GET /api/enrollments/me?page=1&limit=10
+GET /api/enrollments/:courseId/students?status=completed
+```
+
+### Reviews
+
+Public route:
+
+```text
+GET /api/reviews/courses/:courseId
+```
+
+Authenticated routes:
+
+```text
+POST   /api/reviews/courses/:courseId
+GET    /api/reviews/courses/:courseId/me
+GET    /api/reviews/me
+PATCH  /api/reviews/:reviewId
+DELETE /api/reviews/:reviewId
+```
+
+Example review request:
+
+```json
+{
+  "rating": 5,
+  "comment": "This course explains the concepts clearly and practically."
+}
+```
+
+Example sorting:
+
+```text
+GET /api/reviews/courses/:courseId?sort=newest
+GET /api/reviews/courses/:courseId?sort=oldest
+GET /api/reviews/courses/:courseId?sort=rating-high
+GET /api/reviews/courses/:courseId?sort=rating-low
+```
+
 ## File Uploads
 
-Use `multipart/form-data`.
+File upload requests must use:
 
-Avatar upload:
+```text
+multipart/form-data
+```
+
+### Upload User Avatar
 
 ```text
 PATCH /api/users/me/avatar
-field name: avatar
 ```
 
-Course image upload:
+Field name:
+
+```text
+avatar
+```
+
+### Upload Course Cover Image
 
 ```text
 POST  /api/courses
 PATCH /api/courses/:courseId
-field name: image
+```
+
+Field name:
+
+```text
+coverImage
+```
+
+Course creation fields:
+
+```text
+title
+description
+price
+category
+status
+coverImage
+```
+
+### Upload Course Gallery Images
+
+```text
+POST /api/courses/:courseId/gallery
+```
+
+Field name:
+
+```text
+gallery
+```
+
+Add multiple files using the same field name:
+
+```text
+gallery -> image-1.jpg
+gallery -> image-2.jpg
+gallery -> image-3.jpg
+```
+
+Maximum gallery size:
+
+```text
+10 images
 ```
 
 Supported image types:
 
-- JPG
-- JPEG
-- PNG
-- WebP
+* JPG
+* JPEG
+* PNG
+* WebP
 
-Maximum upload size: `5 MB`.
-
-## Authentication
-
-Protected routes require a bearer token:
+Maximum file size:
 
 ```text
-Authorization: Bearer <token>
+5 MB per image
 ```
 
-The token is returned from the register and login endpoints.
+Do not manually add the `Content-Type` header in Postman. Postman automatically generates the correct multipart boundary.
 
 ## Project Structure
 
 ```text
-src/
-  app.js
-  config/
-  controllers/
-  middleware/
-  models/
-  routes/
-  utils/
-  validators/
-server.js
+coursehub-api/
+├── src/
+│   ├── config/
+│   │   ├── cloudinary.js
+│   │   └── db.js
+│   │
+│   ├── controllers/
+│   │   ├── auth.controller.js
+│   │   ├── users.controller.js
+│   │   ├── categories.controller.js
+│   │   ├── courses.controller.js
+│   │   ├── enrollments.controller.js
+│   │   └── reviews.controller.js
+│   │
+│   ├── helpers/
+│   │   ├── category.helper.js
+│   │   ├── cloudinary.helper.js
+│   │   ├── course.helper.js
+│   │   ├── coursePopulate.helper.js
+│   │   ├── pagination.helper.js
+│   │   └── review.helper.js
+│   │
+│   ├── middleware/
+│   │   ├── asyncWrapper.js
+│   │   ├── auth.middleware.js
+│   │   ├── authorize.middleware.js
+│   │   ├── error.middleware.js
+│   │   ├── notFound.middleware.js
+│   │   ├── upload.middleware.js
+│   │   └── validation.middleware.js
+│   │
+│   ├── models/
+│   │   ├── user.model.js
+│   │   ├── category.model.js
+│   │   ├── course.model.js
+│   │   ├── enrollment.model.js
+│   │   └── review.model.js
+│   │
+│   ├── routes/
+│   │   ├── auth.routes.js
+│   │   ├── users.routes.js
+│   │   ├── categories.routes.js
+│   │   ├── courses.routes.js
+│   │   ├── enrollments.routes.js
+│   │   └── reviews.routes.js
+│   │
+│   ├── utils/
+│   │   ├── appError.js
+│   │   ├── generateToken.js
+│   │   ├── httpStatusText.js
+│   │   └── uploadToCloudinary.js
+│   │
+│   ├── validators/
+│   │   ├── category.validator.js
+│   │   ├── course.validator.js
+│   │   ├── enrollment.validator.js
+│   │   ├── gallery.validator.js
+│   │   └── review.validator.js
+│   │
+│   └── app.js
+│
+├── .env.example
+├── .gitignore
+├── package.json
+├── README.md
+└── server.js
 ```
 
-## Notes Before Pushing
+## Main Business Rules
 
-- Keep `.env` private.
-- Commit `.env.example` so other developers know which variables are required.
-- Do not commit `node_modules`.
-- Make sure MongoDB and Cloudinary credentials are configured before testing upload routes.
+* Passwords are stored as bcrypt hashes.
+* Passwords are excluded from normal database queries.
+* Users may only manage their own profiles.
+* Admin-only routes require the `admin` role.
+* Courses must belong to an active category.
+* Only course owners or admins may update or delete courses.
+* Only published courses accept new enrollments.
+* Instructors cannot enroll in their own courses.
+* A user cannot enroll in the same course twice.
+* Only enrolled users may review a course.
+* Instructors cannot review their own courses.
+* A user may submit only one review per course.
+* Course ratings are recalculated automatically after review changes.
+
+## Security Notes
+
+* Keep `.env` private.
+* Never commit database credentials.
+* Never commit Cloudinary API secrets.
+* Never commit JWT secrets.
+* Commit `.env.example` without real values.
+* Do not commit `node_modules`.
+* Rotate any credentials that are accidentally exposed.
+* Use a strong JWT secret in production.
+* Restrict CORS to trusted frontend domains in production.
+
+## Planned Features
+
+* Wishlist management
+* Course sections and lessons
+* Learning progress tracking
+* Course completion certificates
+* Notifications
+* Admin dashboard statistics
+* Password reset flow
+* Refresh tokens
+* Swagger API documentation
+* Unit and integration tests
+* Docker support
+* CI/CD pipeline
+
+## License
+
+This project is intended for learning, portfolio presentation, and backend development practice.
