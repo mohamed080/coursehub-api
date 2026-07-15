@@ -3,6 +3,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 
+const setupSwagger = require("./middleware/swagger.middleware");
+
 const authRoutes = require("./routes/auth.routes");
 const usersRoutes = require("./routes/users.routes");
 const coursesRoutes = require("./routes/courses.routes");
@@ -42,6 +44,8 @@ app.get("/api/health", (req, res) => {
     message: "API is running",
   });
 });
+
+setupSwagger(app);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
