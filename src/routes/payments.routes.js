@@ -3,11 +3,13 @@ const express = require("express");
 const paymentsController = require("../controllers/payments.controller");
 
 const protect = require("../middleware/auth.middleware");
+const verifyPaymobHmac = require("../middleware/paymobHmac.middleware");
+
 const { checkoutValidator } = require("../validators/payment.validator");
 
 const router = express.Router();
 
-router.post("/webhook", paymentsController.webhook);
+router.post("/webhook", verifyPaymobHmac, paymentsController.webhook);
 
 router.use(protect);
 

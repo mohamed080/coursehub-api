@@ -144,9 +144,6 @@ const getMyPayments = asyncWrapper(async (req, res) => {
 });
 
 const webhook = asyncWrapper(async (req, res) => {
-  console.log("========== PAYMOB WEBHOOK ==========");
-  console.log(JSON.stringify(req.body, null, 2));
-
   const transaction = req.body.obj;
 
   if (!transaction) {
@@ -156,9 +153,7 @@ const webhook = asyncWrapper(async (req, res) => {
     });
   }
 
-  const payment = await getPaymentByOrderId(
-    transaction.order.id.toString()
-  );
+  const payment = await getPaymentByOrderId(transaction.order.id.toString());
 
   if (!payment) {
     return res.status(404).json({
@@ -183,7 +178,7 @@ const webhook = asyncWrapper(async (req, res) => {
       {
         upsert: true,
         returnDocument: "after",
-      }
+      },
     );
   } else {
     payment.status = "failed";
