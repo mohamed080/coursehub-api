@@ -3,11 +3,12 @@ const Enrollment = require("../models/enrollment.model");
 const isCourseManager = (course, user) => {
   if (!user) return false;
 
-  const isOwner = course.instructor.toString() === user._id.toString();
-
+  const instructorId = course.instructor?._id || course.instructor;
+  const isOwner = instructorId.toString() === user._id.toString();
+  const isInstructor = user.role === "instructor";
   const isAdmin = user.role === "admin";
 
-  return isOwner || isAdmin;
+  return (isOwner && isInstructor) || isAdmin;
 };
 
 const isUserEnrolled = async (courseId, userId) => {

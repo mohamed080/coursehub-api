@@ -4,10 +4,14 @@ const httpStatusText = require("../utils/httpStatusText");
 const MAX_GALLERY_IMAGES = 10;
 
 const canManageCourse = (course, user) => {
-  return (
-    course.instructor.toString() === user._id.toString() ||
-    user.role === "admin"
-  );
+  if (!user) return false;
+
+  const instructorId = course.instructor?._id || course.instructor;
+  const isOwner = instructorId.toString() === user._id.toString();
+  const isInstructor = user.role === "instructor";
+  const isAdmin = user.role === "admin";
+
+  return (isOwner && isInstructor) || isAdmin;
 };
 
 const checkCourseOwnership = (course, user) => {

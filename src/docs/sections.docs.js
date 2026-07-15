@@ -27,7 +27,7 @@
  *     tags:
  *       - Sections
  *     summary: Create a course section
- *     description: Course owner or admin only.
+ *     description: Course instructor or admin only.
  *     security:
  *       - bearerAuth: []
  *     parameters:

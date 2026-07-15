@@ -33,6 +33,11 @@
  *                 format: password
  *                 minLength: 6
  *                 example: StrongPassword123
+ *               role:
+ *                 type: string
+ *                 enum: [user, instructor]
+ *                 default: user
+ *                 example: instructor
  *     responses:
  *       201:
  *         description: User registered successfully

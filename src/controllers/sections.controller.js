@@ -13,7 +13,7 @@ const { checkCourseOwnership } = require("../helpers/course.helper");
 
 const { deleteCloudinaryVideo } = require("../helpers/cloudinary.helper");
 
-// access  Course owner or admin
+// access  Course instructor or admin
 const createSection = asyncWrapper(async (req, res, next) => {
   const { courseId } = req.params;
   const { title, description, order } = req.body;
@@ -60,7 +60,7 @@ const createSection = asyncWrapper(async (req, res, next) => {
 });
 
 //   access  Public for published courses,
-//    owner/admin for unpublished courses
+//    instructor/admin for unpublished courses
 const getCourseSections = asyncWrapper(async (req, res, next) => {
   const course = await Course.findById(req.params.courseId);
 
@@ -126,7 +126,7 @@ const getCourseSections = asyncWrapper(async (req, res, next) => {
 });
 
 //  access  Public for published courses,
-//    owner/admin for unpublished courses
+//    instructor/admin for unpublished courses
 
 const getSectionById = asyncWrapper(async (req, res, next) => {
   const section = await Section.findById(req.params.sectionId).populate(
@@ -160,7 +160,7 @@ const getSectionById = asyncWrapper(async (req, res, next) => {
   });
 });
 
-//  access  Course owner or admin
+//  access  Course instructor or admin
 const updateSection = asyncWrapper(async (req, res, next) => {
   const section = await Section.findById(req.params.sectionId);
 
@@ -227,7 +227,7 @@ const updateSection = asyncWrapper(async (req, res, next) => {
   });
 });
 
-//  access  Course owner or admin
+//  access  Course instructor or admin
 const deleteSection = asyncWrapper(async (req, res, next) => {
   const section = await Section.findById(req.params.sectionId);
 

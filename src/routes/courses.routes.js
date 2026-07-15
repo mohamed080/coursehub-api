@@ -2,6 +2,7 @@ const express = require("express");
 
 const coursesController = require("../controllers/courses.controller");
 const protect = require("../middleware/auth.middleware");
+const authorize = require("../middleware/authorize.middleware");
 const uploadImage = require("../middleware/upload.middleware");
 const validateRequest = require("../middleware/validation.middleware");
 const {
@@ -22,6 +23,7 @@ router
   .get(coursesController.getAllCourses)
   .post(
     protect,
+    authorize("instructor", "admin"),
     uploadImage.single("coverImage"),
     createCourseValidation,
     validateRequest,

@@ -98,6 +98,7 @@
  *           type: string
  *           enum:
  *             - user
+ *             - instructor
  *             - admin
  *           example: user
  *         isActive:

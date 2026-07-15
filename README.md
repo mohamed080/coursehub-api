@@ -10,7 +10,7 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
 * JWT-based authentication
 * Get current authenticated user
 * Protected routes
-* Role-based authorization for users and admins
+* Role-based authorization for users, instructors, and admins
 
 ### User Management
 
@@ -41,7 +41,7 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
   * `draft`
   * `published`
   * `archived`
-* Course ownership authorization
+* Course instructor ownership authorization
 * Admin course management
 * Course search
 * Filter by category, instructor, status, and price
@@ -57,7 +57,7 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
 * Retrieve a course gallery
 * Delete a single gallery image
 * Clear the entire course gallery
-* Course owner and admin permission checks
+* Course instructor and admin permission checks
 * Automatic Cloudinary cleanup
 
 ### Enrollments
@@ -98,11 +98,29 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
 - Prevent duplicate wishlist entries
 - Search and pagination
 
+### Coupons
+
+- Admin coupon creation, listing, updating, and deletion
+- Fixed-amount and percentage discounts
+- Minimum amount, maximum discount, expiry, active status, and usage-limit support
+- Prevent users from reusing the same coupon
+- Validate coupons before checkout
+
+### Payments
+
+- Paymob checkout integration
+- Create pending payments for course purchases
+- Optional coupon discounts during checkout
+- Return Paymob iframe payment URL
+- Store user payment history
+- Paymob webhook updates payment status
+- Automatically enroll users after successful payment
+
 ### Sections
 
 - Create, update, and delete course sections
 - Order sections within a course
-- Only course owners and admins can manage sections
+- Only course instructors and admins can manage sections
 - Automatically remove lessons when deleting a section
 
 ### Lessons
@@ -112,7 +130,7 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
 - Preview lessons
 - Lesson ordering
 - Automatic Cloudinary video cleanup
-- Only instructors and admins can manage lessons
+- Only the course instructor and admins can manage lessons
 
 ### Progress Tracking
 
@@ -218,6 +236,12 @@ CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 
 DEFAULT_USER_IMAGE=https://res.cloudinary.com/your-cloud/image/upload/default-user.png
+
+PAYMOB_BASE_URL=https://accept.paymob.com
+PAYMOB_API_KEY=your_paymob_api_key
+PAYMOB_INTEGRATION_ID=your_paymob_integration_id
+PAYMOB_IFRAME_ID=your_paymob_iframe_id
+PAYMOB_HMAC=your_paymob_hmac_secret
 ```
 
 ### 4. Run the server
@@ -255,6 +279,20 @@ Authorization: Bearer <token>
 ```
 
 The access token is returned from the register and login endpoints.
+
+Registration supports two public roles:
+
+```json
+{
+  "firstName": "Mohamed",
+  "lastName": "Ayman",
+  "email": "mohamed@example.com",
+  "password": "StrongPassword123",
+  "role": "instructor"
+}
+```
+
+If `role` is omitted, the account is created as `user`. Public registration only accepts `user` or `instructor`; the `admin` role can only be assigned by an admin.
 
 ## API Routes
 
@@ -322,7 +360,7 @@ GET /api/courses
 GET /api/courses/:courseId
 ```
 
-Protected routes:
+Instructor/admin routes:
 
 ```text
 POST   /api/courses
@@ -330,7 +368,7 @@ PATCH  /api/courses/:courseId
 DELETE /api/courses/:courseId
 ```
 
-Course owners may update or delete their own courses. Admins may manage any course.
+Instructors may create courses. A course instructor may update or delete only their own courses. Admins may manage any course.
 
 Example filters:
 
@@ -361,7 +399,7 @@ DELETE /api/courses/:courseId/gallery
 DELETE /api/courses/:courseId/gallery/:imageId
 ```
 
-Only the course owner or an admin may add or remove gallery images.
+Only the course instructor or an admin may add or remove gallery images.
 
 ### Enrollments
 
@@ -435,6 +473,55 @@ DELETE /api/wishlist/:courseId
 DELETE /api/wishlist/me
 ```
 
+### Coupons
+
+User route:
+
+```text
+POST /api/coupons/validate
+```
+
+Admin routes:
+
+```text
+POST   /api/coupons
+GET    /api/coupons
+PATCH  /api/coupons/:id
+DELETE /api/coupons/:id
+```
+
+Example coupon validation request:
+
+```json
+{
+  "code": "SAVE20",
+  "amount": 500
+}
+```
+
+### Payments
+
+Authenticated routes:
+
+```text
+POST /api/payments/checkout/:courseId
+GET  /api/payments
+```
+
+Paymob webhook:
+
+```text
+POST /api/payments/webhook
+```
+
+Example checkout request with an optional coupon:
+
+```json
+{
+  "coupon": "SAVE20"
+}
+```
+
 ### Sections
 
 ```text
@@ -444,6 +531,7 @@ PATCH  /api/sections/:sectionId
 DELETE /api/sections/:sectionId
 ```
 
+Only the course instructor or an admin may create, update, or delete sections.
 
 ### Lessons
 
@@ -454,6 +542,8 @@ POST   /api/sections/:sectionId/lessons
 PATCH  /api/lessons/:lessonId
 DELETE /api/lessons/:lessonId
 ```
+
+Only the course instructor or an admin may create, update, or delete lessons.
 
 ### Progress
 
@@ -601,6 +691,8 @@ coursehub-api/
 │   │   ├── reviews.controller.js
 │   │   ├── wishlist.controller.js
 │   │   ├── certificates.controller.js
+│   │   ├── coupons.controller.js
+│   │   ├── payments.controller.js
 │   │   ├── lessons.controller.js
 │   │   ├── progress.controller.js
 │   │   └── sections.controller.js
@@ -610,6 +702,8 @@ coursehub-api/
 │   │   ├── cloudinary.helper.js
 │   │   ├── course.helper.js
 │   │   ├── coursePopulate.helper.js
+│   │   ├── coupon.helper.js
+│   │   ├── payment.helper.js
 │   │   ├── pagination.helper.js
 │   │   ├── review.helper.js
 │   │   ├── certificate.helper.js
@@ -622,6 +716,8 @@ coursehub-api/
 │   │   ├── authorize.middleware.js
 │   │   ├── error.middleware.js
 │   │   ├── notFound.middleware.js
+│   │   ├── paymobHmac.middleware.js
+│   │   ├── role.middleware.js
 │   │   ├── upload.middleware.js
 │   │   └── validation.middleware.js
 │   │
@@ -633,6 +729,8 @@ coursehub-api/
 │   │   ├── review.model.js
 │   │   ├── wishlist.model.js
 │   │   ├── certificate.model.js
+│   │   ├── coupon.model.js
+│   │   ├── payment.model.js
 │   │   ├── lesson.model.js
 │   │   ├── progress.model.js
 │   │   └── section.model.js
@@ -646,6 +744,8 @@ coursehub-api/
 │   │   ├── reviews.routes.js
 │   │   ├── wishlist.routes.js
 │   │   ├── certificates.routes.js
+│   │   ├── coupons.routes.js
+│   │   ├── payments.routes.js
 │   │   ├── lessons.routes.js
 │   │   ├── progress.routes.js
 │   │   └── sections.routes.js
@@ -654,6 +754,8 @@ coursehub-api/
 │   │   ├── appError.js
 │   │   ├── generateToken.js
 │   │   ├── httpStatusText.js
+│   │   ├── paymob.js
+│   │   ├── paymobHmac.js
 │   │   └── uploadToCloudinary.js
 │   │
 │   ├── validators/
@@ -664,6 +766,8 @@ coursehub-api/
 │   │   ├── review.validator.js
 │   │   ├── wishlist.validator.js
 │   │   ├── certificate.validator.js
+│   │   ├── coupon.validator.js
+│   │   ├── payment.validator.js
 │   │   ├── lesson.validator.js
 │   │   ├── progress.validator.js
 │   │   └── section.validator.js
@@ -683,8 +787,10 @@ coursehub-api/
 * Passwords are excluded from normal database queries.
 * Users may only manage their own profiles.
 * Admin-only routes require the `admin` role.
+* Public registration accepts `user` and `instructor`; admins must be assigned by an admin.
 * Courses must belong to an active category.
-* Only course owners or admins may update or delete courses.
+* Only the course instructor or admins may update or delete courses.
+* Other instructors cannot manage courses they did not create.
 * Only published courses accept new enrollments.
 * Instructors cannot enroll in their own courses.
 * A user cannot enroll in the same course twice.
@@ -696,6 +802,12 @@ coursehub-api/
 - Users cannot add the same course to their wishlist more than once.
 - Users cannot add their own courses to their wishlist.
 - Wishlist is available for all authenticated users.
+- Coupons may be fixed amount or percentage based.
+- Coupons can require a minimum amount, expire, be deactivated, and enforce a usage limit.
+- A user cannot use the same coupon more than once.
+- Checkout creates a pending Paymob payment.
+- Successful Paymob webhook events mark payments as paid and create enrollments.
+- Failed Paymob webhook events mark payments as failed.
 - Courses contain ordered sections.
 - Sections contain ordered lessons.
 - Lessons may be preview or protected.

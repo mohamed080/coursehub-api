@@ -190,11 +190,12 @@ const deactivateMyAccount = asyncWrapper(async (req, res) => {
 
 const updateUserRole = asyncWrapper(async (req, res, next) => {
   const { role } = req.body;
+  const allowedRoles = ["user", "instructor", "admin"];
 
-  if (!["user", "admin"].includes(role)) {
+  if (!allowedRoles.includes(role)) {
     return next(
       new AppError(
-        "Role must be either user or admin",
+        "Role must be one of: user, instructor, admin",
         400,
         httpStatusText.FAIL,
       ),
