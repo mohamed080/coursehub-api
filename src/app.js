@@ -17,6 +17,7 @@ const lessonsRoutes = require("./routes/lessons.routes");
 const progressRoutes = require("./routes/progress.routes");
 const certificatesRoutes = require("./routes/certificates.routes");
 const paymentsRoutes = require("./routes/payments.routes");
+const couponsRoutes = require("./routes/coupons.routes");
 
 const notFound = require("./middleware/notFound.middleware");
 const globalErrorHandler = require("./middleware/error.middleware");
@@ -60,6 +61,7 @@ app.use("/api", lessonsRoutes);
 app.use("/api", progressRoutes);
 app.use("/api/certificates", certificatesRoutes);
 app.use("/api/payments", paymentsRoutes);
+app.use("/api/coupons", couponsRoutes);
 
 app.use(notFound);
 app.use(globalErrorHandler);

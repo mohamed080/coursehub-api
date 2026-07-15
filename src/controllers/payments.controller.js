@@ -9,6 +9,12 @@ const httpStatusText = require("../utils/httpStatusText");
 const { paymob, authenticate } = require("../utils/paymob");
 
 const {
+  validateCoupon,
+  calculateDiscount,
+  markCouponUsed,
+} = require("../helpers/coupon.helper");
+
+const {
   createPendingPayment,
   updatePaymentById,
   getPaymentByOrderId,
@@ -16,6 +22,28 @@ const {
 
 const checkout = asyncWrapper(async (req, res, next) => {
   const course = await Course.findById(req.params.courseId);
+
+  let finalAmount = course.price;
+
+  let discount = 0;
+
+  let coupon = null;
+
+  if (req.body.coupon) {
+    coupon = await validateCoupon({
+      code: req.body.coupon,
+
+      userId: req.user._id,
+
+      amount: course.price,
+    });
+
+    const result = calculateDiscount(coupon, course.price);
+
+    discount = result.discount;
+
+    finalAmount = result.finalAmount;
+  }
 
   if (!course) {
     return next(new AppError("Course not found", 404, httpStatusText.FAIL));
@@ -46,10 +74,16 @@ const checkout = asyncWrapper(async (req, res, next) => {
     user: req.user._id,
     course: course._id,
     amount: course.price,
+
+    finalAmount,
+
+    discount,
+
+    coupon: coupon?._id || null,
   });
 
   try {
-    const amountCents = Math.round(course.price * 100);
+    const amountCents = Math.round(finalAmount * 100);
 
     const authToken = await authenticate();
 
@@ -168,6 +202,10 @@ const webhook = asyncWrapper(async (req, res) => {
   if (transaction.success) {
     payment.status = "paid";
     payment.paidAt = new Date();
+
+    if (payment.coupon) {
+      await markCouponUsed(payment.coupon, payment.user);
+    }
 
     await Enrollment.findOneAndUpdate(
       {
