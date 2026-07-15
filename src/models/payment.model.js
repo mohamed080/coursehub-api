@@ -22,6 +22,21 @@ const paymentSchema = new mongoose.Schema(
       min: 0,
     },
 
+    finalAmount: {
+      type: Number,
+      required: true,
+    },
+
+    discount: {
+      type: Number,
+      default: 0,
+    },
+
+    coupon: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Coupon",
+    },
+
     currency: {
       type: String,
       default: "EGP",
