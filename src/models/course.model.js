@@ -1,5 +1,7 @@
 ﻿const mongoose = require("mongoose");
 
+const User = require("./user.model");
+
 const imageSchema = new mongoose.Schema(
   {
     url: {
@@ -89,6 +91,14 @@ const courseSchema = new mongoose.Schema(
       ref: "User",
       required: true,
       index: true,
+      validate: {
+        validator: async (userId) => {
+          const user = await User.findById(userId).select("role");
+
+          return ["instructor", "admin"].includes(user?.role);
+        },
+        message: "Course instructor must be a user with instructor or admin role",
+      },
     },
 
     status: {

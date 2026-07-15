@@ -52,6 +52,7 @@
  *     tags:
  *       - Courses
  *     summary: Create a course
+ *     description: Instructor or admin only.
  *     security:
  *       - bearerAuth: []
  *     requestBody:

@@ -28,7 +28,7 @@
  *     tags:
  *       - Lessons
  *     summary: Create lesson with video
- *     description: Course owner or admin only.
+ *     description: Course instructor or admin only.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -96,7 +96,7 @@
  *     tags:
  *       - Lessons
  *     summary: Update lesson
- *     description: Course owner or admin only.
+ *     description: Course instructor or admin only.
  *     security:
  *       - bearerAuth: []
  *     parameters:

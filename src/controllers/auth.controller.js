@@ -5,12 +5,22 @@ const httpStatusText = require("../utils/httpStatusText");
 const generateToken = require("../utils/generateToken");
 
 const register = asyncWrapper(async (req, res, next) => {
-  const { firstName, lastName, email, password } = req.body;
+  const { firstName, lastName, email, password, role = "user" } = req.body;
 
   if (!firstName || !lastName || !email || !password) {
     return next(
       new AppError(
         "First name, last name, email and password are required",
+        400,
+        httpStatusText.FAIL,
+      ),
+    );
+  }
+
+  if (!["user", "instructor"].includes(role)) {
+    return next(
+      new AppError(
+        "Role must be either user or instructor",
         400,
         httpStatusText.FAIL,
       ),
@@ -42,6 +52,7 @@ const register = asyncWrapper(async (req, res, next) => {
     lastName,
     email: normalizedEmail,
     password,
+    role,
   });
 
   const token = generateToken(user._id);

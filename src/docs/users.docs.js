@@ -141,7 +141,7 @@
  *         name: role
  *         schema:
  *           type: string
- *           enum: [user, admin]
+ *           enum: [user, instructor, admin]
  *       - in: query
  *         name: isActive
  *         schema:
@@ -216,8 +216,8 @@
  *             properties:
  *               role:
  *                 type: string
- *                 enum: [user, admin]
- *                 example: admin
+ *                 enum: [user, instructor, admin]
+ *                 example: instructor
  *     responses:
  *       200:
  *         description: User role updated successfully
