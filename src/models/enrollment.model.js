@@ -63,4 +63,10 @@ enrollmentSchema.index(
   },
 );
 
+enrollmentSchema.index({
+  course: 1,
+  status: 1,
+  enrolledAt: 1,
+});
+
 module.exports = mongoose.model("Enrollment", enrollmentSchema);

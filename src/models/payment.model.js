@@ -81,4 +81,10 @@ const paymentSchema = new mongoose.Schema(
   },
 );
 
+paymentSchema.index({
+  course: 1,
+  status: 1,
+  paidAt: 1,
+});
+
 module.exports = mongoose.model("Payment", paymentSchema);

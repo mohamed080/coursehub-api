@@ -39,5 +39,6 @@ const reviewSchema = new mongoose.Schema(
 
 // A User can create only one review per course
 reviewSchema.index({ user: 1, course: 1 }, { unique: true });
+reviewSchema.index({ course: 1, rating: 1 });
 
 module.exports = mongoose.model("Review", reviewSchema);
