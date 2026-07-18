@@ -72,6 +72,10 @@ const swaggerOptions = {
         name: "Certificates",
         description: "Course completion certificates",
       },
+      {
+        name: "Instructor",
+        description: "Instructor dashboard and analytics",
+      },
     ],
 
     components: {

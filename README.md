@@ -116,6 +116,18 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
 - Paymob webhook updates payment status
 - Automatically enroll users after successful payment
 
+### Instructor Dashboard and Analytics
+
+- Instructor dashboard summary
+- Paginated instructor courses with search and status filtering
+- Revenue per course
+- Students per course
+- Rating per course
+- Monthly revenue chart
+- Enrollment analytics
+- Top courses by revenue, students, or rating
+- Single-course analytics
+
 ### Sections
 
 - Create, update, and delete course sections
@@ -522,6 +534,30 @@ Example checkout request with an optional coupon:
 }
 ```
 
+### Instructor Dashboard
+
+Instructor/admin routes:
+
+```text
+GET /api/instructor/dashboard
+GET /api/instructor/courses
+GET /api/instructor/revenue
+GET /api/instructor/enrollments
+GET /api/instructor/top-courses
+GET /api/instructor/courses/:courseId/analytics
+```
+
+Example filters:
+
+```text
+GET /api/instructor/courses?search=node&status=published&page=1&limit=10
+GET /api/instructor/revenue?year=2026
+GET /api/instructor/enrollments?year=2026
+GET /api/instructor/top-courses?sortBy=revenue&limit=5
+```
+
+Admins may pass `instructorId` as a query parameter to view analytics for a specific instructor.
+
 ### Sections
 
 ```text
@@ -693,6 +729,7 @@ coursehub-api/
 │   │   ├── certificates.controller.js
 │   │   ├── coupons.controller.js
 │   │   ├── payments.controller.js
+│   │   ├── instructor.controller.js
 │   │   ├── lessons.controller.js
 │   │   ├── progress.controller.js
 │   │   └── sections.controller.js
@@ -703,6 +740,7 @@ coursehub-api/
 │   │   ├── course.helper.js
 │   │   ├── coursePopulate.helper.js
 │   │   ├── coupon.helper.js
+│   │   ├── instructorAnalytics.helper.js
 │   │   ├── payment.helper.js
 │   │   ├── pagination.helper.js
 │   │   ├── review.helper.js
@@ -746,6 +784,7 @@ coursehub-api/
 │   │   ├── certificates.routes.js
 │   │   ├── coupons.routes.js
 │   │   ├── payments.routes.js
+│   │   ├── instructor.routes.js
 │   │   ├── lessons.routes.js
 │   │   ├── progress.routes.js
 │   │   └── sections.routes.js
