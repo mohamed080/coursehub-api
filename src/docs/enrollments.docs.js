@@ -28,6 +28,29 @@
  *       200:
  *         description: Enrollments returned successfully
  *
+ * /api/enrollments/continue-learning:
+ *   get:
+ *     tags:
+ *       - Enrollments
+ *     summary: Get current user's active enrollments for continuing learning
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: Continue learning enrollments returned successfully
+ *
  * /api/enrollments/{courseId}:
  *   post:
  *     tags:

@@ -1,4 +1,5 @@
 const Course = require("../models/course.model");
+const RecentlyViewed = require("../models/recentlyViewed.model");
 
 const asyncWrapper = require("../middleware/asyncWrapper");
 const AppError = require("../utils/appError");
@@ -407,6 +408,66 @@ const getCourseGallery = asyncWrapper(async (req, res, next) => {
   });
 });
 
+const getRecentlyViewedCourses = asyncWrapper(async (req, res, next) => {
+  const { page, limit, skip } = getPagination(req.query);
+
+  const [recentlyViewed, totalCourses] = await Promise.all([
+    RecentlyViewed.find({ user: req.user._id })
+      .populate({
+        path: "course",
+        select: "title description price coverImage status category instructor",
+        populate: [
+          { path: "category", select: "name slug" },
+          { path: "instructor", select: "firstName lastName avatar" },
+        ],
+      })
+      .sort({ viewedAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    RecentlyViewed.countDocuments({ user: req.user._id }),
+  ]);
+
+  const totalPages = Math.ceil(totalCourses / limit);
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    results: recentlyViewed.length,
+    data: {
+      recentlyViewed,
+      pagination: {
+        currentPage: page,
+        limit,
+        totalCourses,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    },
+  });
+});
+
+const recordCourseView = asyncWrapper(async (req, res, next) => {
+  const course = await Course.findById(req.params.courseId);
+
+  if (!course) {
+    return next(new AppError("Course not found", 404, httpStatusText.FAIL));
+  }
+
+  const recentlyViewed = await RecentlyViewed.findOneAndUpdate(
+    { user: req.user._id, course: course._id },
+    { viewedAt: Date.now() },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    message: "Course view recorded successfully",
+    data: {
+      recentlyViewed,
+    },
+  });
+});
+
 module.exports = {
   createCourse,
   getAllCourses,
@@ -418,4 +479,7 @@ module.exports = {
   addCourseGalleryImage,
   deleteCourseGalleryImage,
   clearCourseGallery,
+
+  getRecentlyViewedCourses,
+  recordCourseView,
 };

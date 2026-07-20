@@ -150,4 +150,41 @@
  *     responses:
  *       200:
  *         description: Course deleted successfully
+ *
+ * /api/courses/recently-viewed:
+ *   get:
+ *     tags:
+ *       - Courses
+ *     summary: Get recently viewed courses
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Recently viewed courses returned successfully
+ *
+ * /api/courses/{courseId}/view:
+ *   post:
+ *     tags:
+ *       - Courses
+ *     summary: Record a course view
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: courseId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Course view recorded successfully
  */
