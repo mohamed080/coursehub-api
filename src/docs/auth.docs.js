@@ -5,7 +5,11 @@
  *     tags:
  *       - Authentication
  *     summary: Register a new user
- *     description: Creates a user account and returns a JWT token.
+ *     description: |
+ *       Creates a new user account and returns a JWT access token.
+ *
+ *       Automatically sends:
+ *       - Welcome email
  *     requestBody:
  *       required: true
  *       content:
@@ -43,10 +47,6 @@
  *         description: User registered successfully
  *       400:
  *         description: Invalid request data
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *       409:
  *         description: Email already exists
  *
@@ -55,6 +55,7 @@
  *     tags:
  *       - Authentication
  *     summary: Login user
+ *     description: Authenticate a user and return a JWT access token.
  *     requestBody:
  *       required: true
  *       content:
@@ -88,20 +89,68 @@
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Current user returned successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       $ref: '#/components/schemas/User'
+ *         description: Current authenticated user
  *       401:
  *         description: Authentication required
+ *
+ * /api/auth/forgot-password:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Request password reset
+ *     description: |
+ *       Generates a password reset token.
+ *
+ *       Automatically sends:
+ *       - Password reset email
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: mohamed@example.com
+ *     responses:
+ *       200:
+ *         description: Password reset email sent if the account exists
+ *       400:
+ *         description: Invalid request
+ *
+ * /api/auth/reset-password/{token}:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Reset password
+ *     description: Reset the user's password using the reset token received by email.
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: 8a4c5c6d9a7d...
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: NewStrongPassword123
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Token is invalid or expired
  */

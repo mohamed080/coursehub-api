@@ -55,7 +55,11 @@
  *       - Coupons
  *
  *     summary: Create coupon
+ *     description: |
+ *       Creates a new coupon.
  *
+ *       Automatically sends:
+ *       - Coupon created email to the administrator
  *     security:
  *       - bearerAuth: []
  *

@@ -51,6 +51,11 @@
  *     tags:
  *       - Certificates
  *     summary: Generate course completion certificate
+ *     description: |
+ *       Generates a certificate after the student has completed the course.
+ *
+ *       Automatically sends:
+ *       - Certificate email to the student
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -66,6 +71,8 @@
  *         description: Existing certificate returned
  *       403:
  *         description: Course completion required
+ *       404:
+ *         description: Course not found
  *
  * /api/certificates:
  *   get:

@@ -10,9 +10,15 @@ const {
   validateCoupon,
   calculateDiscount,
 } = require("../helpers/coupon.helper");
+const { sendCouponCreatedEmail } = require("../services/email.service");
 
 const createCoupon = asyncWrapper(async (req, res) => {
   const coupon = await Coupon.create(req.body);
+
+  sendCouponCreatedEmail({
+    admin: req.user,
+    coupon,
+  });
 
   res.status(201).json({
     status: httpStatusText.SUCCESS,

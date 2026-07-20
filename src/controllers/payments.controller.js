@@ -1,6 +1,7 @@
 const Course = require("../models/course.model");
 const Enrollment = require("../models/enrollment.model");
 const Payment = require("../models/payment.model");
+const User = require("../models/user.model");
 
 const asyncWrapper = require("../middleware/asyncWrapper");
 const AppError = require("../utils/appError");
@@ -19,6 +20,10 @@ const {
   updatePaymentById,
   getPaymentByOrderId,
 } = require("../helpers/payment.helper");
+const {
+  sendInstructorEnrollmentEmail,
+  sendPurchaseEmail,
+} = require("../services/email.service");
 
 const checkout = asyncWrapper(async (req, res, next) => {
   const course = await Course.findById(req.params.courseId);
@@ -197,6 +202,8 @@ const webhook = asyncWrapper(async (req, res) => {
   }
 
   // Save transaction id
+  const wasAlreadyPaid = payment.status === "paid";
+
   payment.transactionId = transaction.id.toString();
 
   if (transaction.success) {
@@ -218,6 +225,32 @@ const webhook = asyncWrapper(async (req, res) => {
         returnDocument: "after",
       },
     );
+
+    if (!wasAlreadyPaid) {
+      const [user, course] = await Promise.all([
+        User.findById(payment.user).select("firstName lastName email"),
+        Course.findById(payment.course).populate(
+          "instructor",
+          "firstName lastName email",
+        ),
+      ]);
+
+      if (user && course) {
+        sendPurchaseEmail({
+          user,
+          course,
+          payment,
+        });
+
+        if (course.instructor?.email) {
+          sendInstructorEnrollmentEmail({
+            instructor: course.instructor,
+            student: user,
+            course,
+          });
+        }
+      }
+    }
   } else {
     payment.status = "failed";
   }
