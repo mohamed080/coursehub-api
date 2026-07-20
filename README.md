@@ -160,6 +160,19 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
 - Student certificate history
 - Admin revoke and restore certificates
 
+## Email Service 
+
+- Centralized email configuration
+- Reusable email sending service
+- HTML email templates
+- Safe async email delivery
+- Password reset email flow
+- User registration welcome email
+- Course purchase confirmation email
+- Certificate generation email
+- Instructor enrollment notification
+- Coupon creation notification
+
 ### File Uploads
 
 * Multer memory storage
@@ -198,6 +211,7 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
 * Morgan
 * dotenv
 * slugify
+* Nodemailer
 
 ## Getting Started
 
@@ -254,6 +268,13 @@ PAYMOB_API_KEY=your_paymob_api_key
 PAYMOB_INTEGRATION_ID=your_paymob_integration_id
 PAYMOB_IFRAME_ID=your_paymob_iframe_id
 PAYMOB_HMAC=your_paymob_hmac_secret
+
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
+EMAIL_SECURE=false
+EMAIL_FROM=your-email@gmail.com
 ```
 
 ### 4. Run the server

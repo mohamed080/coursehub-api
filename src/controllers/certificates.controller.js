@@ -13,6 +13,7 @@ const {
   generateUniqueVerificationCode,
   populateCertificate,
 } = require("../helpers/certificate.helper");
+const { sendCertificateEmail } = require("../services/email.service");
 
 //  @access  Authenticated student
 const generateCertificate = asyncWrapper(async (req, res, next) => {
@@ -74,6 +75,12 @@ const generateCertificate = asyncWrapper(async (req, res, next) => {
   });
 
   await populateCertificate(certificate);
+
+  sendCertificateEmail({
+    user: req.user,
+    course,
+    certificate,
+  });
 
   res.status(201).json({
     status: httpStatusText.SUCCESS,

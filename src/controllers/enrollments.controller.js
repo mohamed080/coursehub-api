@@ -7,6 +7,7 @@ const httpStatusText = require("../utils/httpStatusText");
 
 const getPagination = require("../helpers/pagination.helper");
 const { checkCourseOwnership } = require("../helpers/course.helper");
+const { sendInstructorEnrollmentEmail } = require("../services/email.service");
 
 // access  Authenticated
 const enrollInCourse = asyncWrapper(async (req, res, next) => {
@@ -76,11 +77,19 @@ const enrollInCourse = asyncWrapper(async (req, res, next) => {
         },
         {
           path: "instructor",
-          select: "firstName lastName avatar",
+          select: "firstName lastName email avatar",
         },
       ],
     },
   ]);
+
+  if (enrollment.course.instructor?.email) {
+    sendInstructorEnrollmentEmail({
+      instructor: enrollment.course.instructor,
+      student: enrollment.user,
+      course: enrollment.course,
+    });
+  }
 
   res.status(201).json({
     status: httpStatusText.SUCCESS,

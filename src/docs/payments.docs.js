@@ -86,13 +86,21 @@
  *
  *     description:
  *       Receives payment status updates from Paymob.
- *
+ *  
+ *       After a successful payment the API will:
+ *       - Mark the payment as paid
+ *       - Save the Paymob transaction ID
+ *       - Create the course enrollment
+ *       - Mark the coupon as used (if applied)
+ *       - Send a purchase confirmation email
+ *       - Notify the course instructor about the new enrollment
  *     responses:
- *
  *       200:
- *         description: Webhook received
- *
+ *         description: Webhook processed successfully
+ *       400:
+ *         description: Invalid webhook payload
  *       403:
- *         description: Invalid HMAC
- *
+ *         description: Invalid HMAC signature
+ *       404:
+ *         description: Payment not found
  */

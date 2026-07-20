@@ -76,6 +76,10 @@ const swaggerOptions = {
         name: "Instructor",
         description: "Instructor dashboard and analytics",
       },
+      {
+        name: "Email",
+        description: "Automatic transactional emails",
+      },
     ],
 
     components: {

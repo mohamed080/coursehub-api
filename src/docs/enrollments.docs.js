@@ -33,6 +33,11 @@
  *     tags:
  *       - Enrollments
  *     summary: Enroll current user in a course
+ *     description: |
+ *       Enrolls the authenticated user in a published course.
+ *
+ *       Automatically sends:
+ *       - Instructor enrollment notification email
  *     security:
  *       - bearerAuth: []
  *     parameters:
