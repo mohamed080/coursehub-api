@@ -1,4 +1,4 @@
-﻿# CourseHub API
+# CourseHub API
 
 A scalable RESTful API for an online learning platform built with Node.js, Express.js, MongoDB, JWT authentication, role-based authorization, Cloudinary image uploads, enrollments, and course reviews.
 
@@ -393,6 +393,13 @@ GET /api/courses
 GET /api/courses/:courseId
 ```
 
+Authenticated user routes:
+
+```text
+GET  /api/courses/recently-viewed
+POST /api/courses/:courseId/view
+```
+
 Instructor/admin routes:
 
 ```text
@@ -441,6 +448,7 @@ Current-user routes:
 ```text
 POST   /api/enrollments/:courseId
 GET    /api/enrollments/me
+GET    /api/enrollments/continue-learning
 GET    /api/enrollments/:courseId/status
 DELETE /api/enrollments/:courseId
 ```

@@ -30,6 +30,16 @@ router
     coursesController.createCourse,
   );
 
+router.get("/recently-viewed", protect, coursesController.getRecentlyViewedCourses);
+
+router.post(
+  "/:courseId/view",
+  protect,
+  courseIdValidation,
+  validateRequest,
+  coursesController.recordCourseView
+);
+
 router
   .route("/:courseId")
   .get(courseIdValidation, validateRequest, coursesController.getCourseById)

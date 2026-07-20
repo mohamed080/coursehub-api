@@ -29,6 +29,11 @@ router.get(
 );
 
 router.get(
+  "/continue-learning",
+  enrollmentsController.getContinueLearning,
+);
+
+router.get(
   "/:courseId/status",
   courseEnrollmentValidation,
   validateRequest,

@@ -283,6 +283,49 @@ const removeStudentEnrollment = asyncWrapper(async (req, res, next) => {
   });
 });
 
+const getContinueLearning = asyncWrapper(async (req, res, next) => {
+  const { page, limit, skip } = getPagination(req.query);
+
+  const filter = {
+    user: req.user._id,
+    status: "active",
+  };
+
+  const [enrollments, totalEnrollments] = await Promise.all([
+    Enrollment.find(filter)
+      .populate({
+        path: "course",
+        select: "title description price coverImage status category instructor",
+        populate: [
+          { path: "category", select: "name slug" },
+          { path: "instructor", select: "firstName lastName avatar" },
+        ],
+      })
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Enrollment.countDocuments(filter),
+  ]);
+
+  const totalPages = Math.ceil(totalEnrollments / limit);
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    results: enrollments.length,
+    data: {
+      enrollments,
+      pagination: {
+        currentPage: page,
+        limit,
+        totalEnrollments,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    },
+  });
+});
+
 module.exports = {
   enrollInCourse,
   getMyEnrollments,
@@ -290,4 +333,5 @@ module.exports = {
   cancelMyEnrollment,
   getCourseStudents,
   removeStudentEnrollment,
+  getContinueLearning,
 };
