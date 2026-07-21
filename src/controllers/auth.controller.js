@@ -8,25 +8,16 @@ const generateToken = require("../utils/generateToken");
 const {
   sendResetPasswordEmail,
   sendWelcomeEmail,
+  sendVerificationEmail,
 } = require("../services/email.service");
 
 const register = asyncWrapper(async (req, res, next) => {
-  const { firstName, lastName, email, password, role = "user" } = req.body;
+  const { firstName, lastName, email, password } = req.body;
 
   if (!firstName || !lastName || !email || !password) {
     return next(
       new AppError(
         "First name, last name, email and password are required",
-        400,
-        httpStatusText.FAIL,
-      ),
-    );
-  }
-
-  if (!["user", "instructor"].includes(role)) {
-    return next(
-      new AppError(
-        "Role must be either user or instructor",
         400,
         httpStatusText.FAIL,
       ),
@@ -58,19 +49,32 @@ const register = asyncWrapper(async (req, res, next) => {
     lastName,
     email: normalizedEmail,
     password,
-    role,
+    role: "user",
   });
 
-  const token = generateToken(user._id);
+  const verificationToken = user.createEmailVerificationToken();
+  await user.save({
+    validateBeforeSave: false,
+  });
 
-  sendWelcomeEmail(user);
+  const verificationUrl = `${process.env.CLIENT_URL || "http://localhost:3000"}/verify-email/${verificationToken}`;
+
+  try {
+    await sendVerificationEmail({
+      user,
+      verificationUrl,
+    });
+  } catch (error) {
+    await User.findByIdAndDelete(user._id);
+
+    return next(new AppError("Failed to send verification email", 500));
+  }
 
   res.status(201).json({
     status: httpStatusText.SUCCESS,
-    message: "Account created successfully",
+    message: "Account created successfully. Please verify your email address.",
     data: {
       user: user.toSafeObject(),
-      token,
     },
   });
 });
@@ -112,6 +116,19 @@ const login = asyncWrapper(async (req, res, next) => {
         "Your account has been deactivated",
         403,
         httpStatusText.FAIL,
+      ),
+    );
+  }
+
+  if (!user.isEmailVerified) {
+    return next(
+      new AppError(
+        "Please verify your email address before logging in",
+        403,
+        httpStatusText.FAIL,
+        {email: user.email,
+          needVerification: true
+        },
       ),
     );
   }
@@ -246,10 +263,122 @@ const resetPassword = asyncWrapper(async (req, res, next) => {
   });
 });
 
+const verifyEmail = asyncWrapper(async (req, res, next) => {
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+
+  const user = await User.findOne({
+    emailVerificationToken: hashedToken,
+    emailVerificationExpires: {
+      $gt: Date.now(),
+    },
+  }).select("+emailVerificationToken +emailVerificationExpires");   
+  
+  if (!user) {
+    return next(
+      new AppError(
+        "Invalid or expired verification token",
+        400,
+        httpStatusText.FAIL,
+      ),
+    );
+  }
+  
+  if (user.emailVerified) {
+    return next(
+      new AppError("Email is already verified", 400, httpStatusText.FAIL),
+    );
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+
+  await user.save();
+
+  // Send welcome email after verification
+  await sendWelcomeEmail(user);
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    message: "Email verified successfully",
+    data: {
+      user: user.toSafeObject(),
+    },
+  });
+});
+
+const resendVerification = asyncWrapper(async (req, res, next) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return next(new AppError("Email is required", 400, httpStatusText.FAIL));
+  }
+
+  const user = await User.findOne({
+    email: email.toLowerCase().trim(),
+  });
+
+  if (!user) {
+    // Prevent email enumeration
+    return res.status(200).json({
+      status: httpStatusText.SUCCESS,
+      message: "If an account exists, a verification email has been sent",
+      data: null,
+    });
+  }
+
+  if (user.isEmailVerified) {
+    return next(
+      new AppError("Email is already verified", 400, httpStatusText.FAIL),
+    );
+  }
+
+  // Create new verification token
+  const verificationToken = user.createEmailVerificationToken();
+  await user.save({
+    validateBeforeSave: false,
+  });
+
+  const verificationUrl = `${process.env.CLIENT_URL || "http://localhost:3000"}/verify-email/${verificationToken}`;
+
+  try {
+    await sendVerificationEmail({
+      user,
+      verificationUrl,
+    });
+  } catch (error) {
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+
+    await user.save({
+      validateBeforeSave: false,
+    });
+
+    return next(
+      new AppError(
+        "Failed to send verification email",
+        500,
+        httpStatusText.ERROR,
+      ),
+    );
+  }
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    message: "If an account exists, a verification email has been sent",
+    data: null,
+  });
+});
+
 module.exports = {
   forgotPassword,
   register,
   login,
   getCurrentUser,
   resetPassword,
+  verifyEmail,
+  resendVerification,
 };

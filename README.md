@@ -7,10 +7,12 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
 ### Authentication
 
 * User registration and login
+* **Email verification** (users must verify their email before logging in)
 * JWT-based authentication
 * Get current authenticated user
 * Protected routes
 * Role-based authorization for users, instructors, and admins
+* Password reset functionality
 
 ### User Management
 
@@ -127,6 +129,19 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
 - Enrollment analytics
 - Top courses by revenue, students, or rating
 - Single-course analytics
+
+### Admin Dashboard and Management
+
+- Platform-wide KPI summary in a single call (users, courses, enrollments, revenue, payments)
+- User Management: Search users by name/email, filter by role (`user`, `instructor`, `admin`) and status (`active`, `blocked`), block/unblock accounts, update roles, and delete accounts
+- Course Moderation: View all platform courses, search, approve/publish, reject/draft, archive, or delete courses with automatic Cloudinary asset cleanup
+- Instructor Management: Instructor directory with course counts, total earnings, student counts, and instructor verification toggle (`isInstructorVerified`)
+- Instructor Request Approval Flow: Users can request instructor status (`POST /api/users/me/request-instructor`), admin can list pending requests, approve (sets role to `instructor`), or reject
+- Payment Management: Transaction history listing with status filters (`paid`, `pending`, `failed`), payment details, and refund handling
+- Review Moderation: Platform-wide review listing, moderation, deletion of inappropriate reviews, and automatic course rating recalculation
+- Recent Activity Feed: Aggregated audit log of platform actions (`user_registration`, `course_creation`, `enrollment`, `payment`, `review_deleted`, etc.)
+- Custom Date Range Filtering: `?from=YYYY-MM-DD&to=YYYY-MM-DD` query filters supported across revenue, enrollment, and user growth charts
+- Data Export Reports: Export users, revenue, and courses data in CSV (`format=csv`) or JSON formats
 
 ### Sections
 
@@ -329,13 +344,17 @@ If `role` is omitted, the account is created as `user`. Public registration only
 
 ## API Routes
 
-### Authentication
+### Authentication Routes
 
-```text
-POST /api/auth/register
-POST /api/auth/login
-GET  /api/auth/me
-```
+| Method | Route | Description | Protected |
+|--------|-------|-------------|-----------|
+| POST | `/api/auth/register` | Register new user | No |
+| POST | `/api/auth/login` | Login user | No |
+| GET | `/api/auth/verify-email/:token` | Verify email | No |
+| POST | `/api/auth/resend-verification` | Resend verification email | No |
+| POST | `/api/auth/forgot-password` | Request password reset | No |
+| PATCH | `/api/auth/reset-password/:token` | Reset password | No |
+| GET | `/api/auth/me` | Get current user | Yes |
 
 ### Users
 
@@ -345,6 +364,7 @@ Authenticated user routes:
 PATCH  /api/users/me
 PATCH  /api/users/me/password
 DELETE /api/users/me
+POST   /api/users/me/request-instructor
 
 PATCH  /api/users/me/avatar
 DELETE /api/users/me/avatar
@@ -586,6 +606,61 @@ GET /api/instructor/top-courses?sortBy=revenue&limit=5
 ```
 
 Admins may pass `instructorId` as a query parameter to view analytics for a specific instructor.
+
+### Admin Dashboard and Management
+
+Admin-only routes:
+
+```text
+GET    /api/admin/dashboard
+GET    /api/admin/revenue
+GET    /api/admin/enrollments
+GET    /api/admin/users/growth
+GET    /api/admin/top-courses
+GET    /api/admin/top-instructors
+
+GET    /api/admin/users
+GET    /api/admin/users/:id
+PATCH  /api/admin/users/:id/status
+DELETE /api/admin/users/:id
+
+GET    /api/admin/courses
+GET    /api/admin/courses/:id
+PATCH  /api/admin/courses/:id/status
+DELETE /api/admin/courses/:id
+
+GET    /api/admin/instructors
+PATCH  /api/admin/instructors/:id/verify
+GET    /api/admin/instructors/requests
+PATCH  /api/admin/instructors/:id/approve
+PATCH  /api/admin/instructors/:id/reject
+
+GET    /api/admin/payments
+GET    /api/admin/payments/:id
+PATCH  /api/admin/payments/:id/refund
+
+GET    /api/admin/reviews
+DELETE /api/admin/reviews/:id
+
+GET    /api/admin/activity
+
+GET    /api/admin/export/users
+GET    /api/admin/export/revenue
+GET    /api/admin/export/courses
+```
+
+Example filters and queries:
+
+```text
+GET /api/admin/users?search=alex&role=instructor&status=active&page=1&limit=10
+GET /api/admin/courses?status=draft&category=<categoryId>&page=1&limit=10
+GET /api/admin/revenue?from=2026-01-01&to=2026-06-30
+GET /api/admin/enrollments?from=2026-01-01&to=2026-06-30
+GET /api/admin/top-courses?sortBy=revenue&limit=5
+GET /api/admin/top-instructors?sortBy=students&limit=5
+GET /api/admin/export/users?format=csv
+GET /api/admin/export/revenue?format=csv
+```
 
 ### Sections
 

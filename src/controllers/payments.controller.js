@@ -27,6 +27,10 @@ const {
 
 const checkout = asyncWrapper(async (req, res, next) => {
   const course = await Course.findById(req.params.courseId);
+  
+  if (!course) {
+    return next(new AppError("Course not found", 404, httpStatusText.FAIL));
+  }
 
   let finalAmount = course.price;
 
@@ -34,7 +38,7 @@ const checkout = asyncWrapper(async (req, res, next) => {
 
   let coupon = null;
 
-  if (req.body.coupon) {
+  if (req.body?.coupon) {
     coupon = await validateCoupon({
       code: req.body.coupon,
 
@@ -50,9 +54,6 @@ const checkout = asyncWrapper(async (req, res, next) => {
     finalAmount = result.finalAmount;
   }
 
-  if (!course) {
-    return next(new AppError("Course not found", 404, httpStatusText.FAIL));
-  }
 
   if (course.status !== "published") {
     return next(

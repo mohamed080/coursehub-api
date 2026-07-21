@@ -22,6 +22,8 @@ router.patch("/me/password", usersController.updateMyPassword);
 
 router.delete("/me", usersController.deactivateMyAccount);
 
+router.post("/me/request-instructor", usersController.requestInstructorStatus);
+
 router.patch(
   "/me/avatar",
   uploadImage.single("avatar"),

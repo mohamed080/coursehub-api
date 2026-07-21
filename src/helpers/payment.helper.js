@@ -1,10 +1,13 @@
 const Payment = require("../models/payment.model");
 
-const createPendingPayment = async ({ user, course, amount }) => {
+const createPendingPayment = async ({ user, course, amount, finalAmount, discount, coupon}) => {
   return Payment.create({
     user,
     course,
     amount,
+    finalAmount,
+    discount,
+    coupon,
     status: "pending",
     provider: "paymob",
     currency: "EGP",

@@ -38,7 +38,9 @@ const userSchema = new mongoose.Schema(
     avatar: {
       url: {
         type: String,
-        default: process.env.DEFAULT_USER_IMAGE || "https://res.cloudinary.com/dm3o4xv0o/image/upload/v1675830008/avatars/default_avatar.png",
+        default:
+          process.env.DEFAULT_USER_IMAGE ||
+          "https://res.cloudinary.com/dm3o4xv0o/image/upload/v1675830008/avatars/default_avatar.png",
       },
 
       publicId: {
@@ -55,11 +57,36 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    isInstructorVerified: {
+      type: Boolean,
+      default: false,
+    },
+    instructorStatus: {
+      type: String,
+      enum: ["none", "pending", "approved", "rejected"],
+      default: "none",
+    },
     passwordResetToken: {
       type: String,
       select: false,
     },
     passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: {
+      type: String,
+      select: false,
+    },
+    emailVerificationExpires: {
       type: Date,
       select: false,
     },
@@ -69,6 +96,8 @@ const userSchema = new mongoose.Schema(
     versionKey: false,
   },
 );
+
+userSchema.index({ firstName: "text", lastName: "text", email: "text" });
 
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) {
@@ -101,6 +130,19 @@ userSchema.methods.createPasswordResetToken = function () {
   this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
 
   return resetToken;
+};
+
+userSchema.methods.createEmailVerificationToken = function () {
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+
+  this.emailVerificationToken = crypto
+    .createHash("sha256")
+    .update(verificationToken)
+    .digest("hex");
+
+  this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+
+  return verificationToken;
 };
 
 module.exports = mongoose.model("User", userSchema);

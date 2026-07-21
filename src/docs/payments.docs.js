@@ -84,7 +84,7 @@
  *
  *     summary: Paymob webhook callback
  *
- *     description:
+ *     description: |
  *       Receives payment status updates from Paymob.
  *  
  *       After a successful payment the API will:

@@ -6,10 +6,14 @@
  *       - Authentication
  *     summary: Register a new user
  *     description: |
- *       Creates a new user account and returns a JWT access token.
+ *       Creates a new user account.
+ *
+ *       **Important:** The user must verify their email address before logging in.
+ *       A verification email is automatically sent upon registration.
+ *       No JWT token is returned at registration.
  *
  *       Automatically sends:
- *       - Welcome email
+ *       - Email verification email (expires in 24 hours)
  *     requestBody:
  *       required: true
  *       content:
@@ -37,14 +41,9 @@
  *                 format: password
  *                 minLength: 6
  *                 example: StrongPassword123
- *               role:
- *                 type: string
- *                 enum: [user, instructor]
- *                 default: user
- *                 example: instructor
  *     responses:
  *       201:
- *         description: User registered successfully
+ *         description: User registered successfully. Email verification sent.
  *       400:
  *         description: Invalid request data
  *       409:
@@ -55,7 +54,10 @@
  *     tags:
  *       - Authentication
  *     summary: Login user
- *     description: Authenticate a user and return a JWT access token.
+ *     description: |
+ *       Authenticate a user and return a JWT access token.
+ *
+ *       **Note:** User must have verified their email address before login.
  *     requestBody:
  *       required: true
  *       content:
@@ -79,6 +81,8 @@
  *         description: Login successful
  *       401:
  *         description: Invalid credentials
+ *       403:
+ *         description: Email not verified or account deactivated
  *
  * /api/auth/me:
  *   get:
@@ -153,4 +157,54 @@
  *         description: Password reset successfully
  *       400:
  *         description: Token is invalid or expired
+ *
+ * /api/auth/verify-email/{token}:
+ *   get:
+ *     tags:
+ *       - Authentication
+ *     summary: Verify user email
+ *     description: |
+ *       Verifies the user's email address using the verification token received by email.
+ *       Upon successful verification, a JWT token is returned and the user can log in.
+ *       The verification link expires in 24 hours.
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: 8a4c5c6d9a7d...
+ *     responses:
+ *       200:
+ *         description: Email verified successfully. JWT token returned.
+ *       400:
+ *         description: Token is invalid or expired
+ *
+ * /api/auth/resend-verification:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Resend email verification
+ *     description: |
+ *       Resends the email verification link to the user's registered email.
+ *       Can only be used for unverified accounts.
+ *       Rate limited to prevent abuse.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: mohamed@example.com
+ *     responses:
+ *       200:
+ *         description: If an account exists, a verification email has been sent
+ *       400:
+ *         description: Email is already verified
  */
