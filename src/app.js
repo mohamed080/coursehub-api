@@ -52,6 +52,14 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "CourseHub API is running 🚀",
+    documentation: "/api/docs",
+  });
+});
+
 setupSwagger(app);
 
 app.use("/api/auth", authRoutes);
