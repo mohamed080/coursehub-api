@@ -926,40 +926,128 @@ coursehub-api/
 
 ## Main Business Rules
 
-* Passwords are stored as bcrypt hashes.
-* Passwords are excluded from normal database queries.
-* Users may only manage their own profiles.
-* Admin-only routes require the `admin` role.
-* Public registration accepts `user` and `instructor`; admins must be assigned by an admin.
-* Courses must belong to an active category.
-* Only the course instructor or admins may update or delete courses.
-* Other instructors cannot manage courses they did not create.
-* Only published courses accept new enrollments.
-* Instructors cannot enroll in their own courses.
-* A user cannot enroll in the same course twice.
-* Only enrolled users may review a course.
-* Instructors cannot review their own courses.
-* A user may submit only one review per course.
-* Course ratings are recalculated automatically after review changes.
+### Authentication & Accounts
+
+- Passwords are stored as bcrypt hashes.
+- Passwords are excluded from normal database queries.
+- The same email cannot be registered by multiple accounts.
+- New accounts are always created with the `user` role.
+- Admin accounts cannot be created through public registration.
+- Users must verify their email address before logging in.
+- Email verification tokens expire after 24 hours.
+- Verification emails can be resent only for unverified accounts.
+- Verification tokens are securely hashed before being stored in the database.
+- Password reset tokens expire after 10 minutes.
+- Password reset tokens are securely hashed before being stored in the database.
+- A welcome email is sent only after successful email verification.
+- Deactivated accounts cannot log in.
+
+### Authorization & User Management
+
+- Users may only manage their own profiles.
+- Admin-only routes require the `admin` role.
+- Only admins can change user roles.
+- Only admins can block, unblock, or delete other users.
+- Deleted users cannot interact with the platform.
+- Inactive users cannot access protected resources.
+
+### Instructor Workflow
+
+- Users must request instructor access before becoming instructors.
+- A user can have only one active instructor request at a time.
+- Only admins can approve or reject instructor requests.
+- Approving an instructor request changes the user's role to `instructor`.
+- Rejecting an instructor request keeps the user as a regular `user`.
+- Instructor approval and instructor verification are separate processes.
+- Only admins can verify or unverify instructors.
+- Only instructors can create and manage courses.
+- Instructors can only manage courses they own unless they are admins.
+
+### Categories
+
+- Courses must belong to an active category.
+- Courses cannot be assigned to deleted or inactive categories.
+
+### Courses
+
+- Only approved instructors or admins may create courses.
+- Only the course instructor or admins may update or delete courses.
+- Other instructors cannot manage courses they did not create.
+- Only published courses are publicly visible.
+- Archived courses cannot receive new enrollments.
+- Draft courses cannot receive enrollments, reviews, or wishlist additions.
+
+### Enrollments
+
+- Only published courses accept new enrollments.
+- Instructors cannot enroll in their own courses.
+- A user cannot enroll in the same course twice.
+- Successful payment automatically creates the enrollment.
+- Enrollment is required before accessing protected course content.
+
+### Wishlist
+
 - Only published courses can be added to a wishlist.
 - Users cannot add the same course to their wishlist more than once.
 - Users cannot add their own courses to their wishlist.
-- Wishlist is available for all authenticated users.
+- Wishlist is available for authenticated users only.
+
+### Reviews & Ratings
+
+- Only enrolled users may review a course.
+- Instructors cannot review their own courses.
+- A user may submit only one review per course.
+- Course ratings are recalculated automatically after review creation, update, or deletion.
+- Admins can moderate and delete inappropriate reviews.
+
+### Coupons
+
 - Coupons may be fixed amount or percentage based.
-- Coupons can require a minimum amount, expire, be deactivated, and enforce a usage limit.
+- Coupons can require a minimum purchase amount.
+- Coupons can expire.
+- Coupons can be deactivated.
+- Coupons can enforce usage limits.
 - A user cannot use the same coupon more than once.
+- Coupons are marked as used only after successful payment.
+
+### Payments
+
 - Checkout creates a pending Paymob payment.
-- Successful Paymob webhook events mark payments as paid and create enrollments.
+- Payments remain pending until a successful Paymob webhook is received.
+- Successful Paymob webhook events mark payments as paid.
 - Failed Paymob webhook events mark payments as failed.
+- Successful payments automatically create enrollments.
+- Purchase confirmation emails are sent after successful payments.
+- Instructors receive enrollment notifications after successful purchases.
+
+### Course Content
+
 - Courses contain ordered sections.
 - Sections contain ordered lessons.
+- Lessons contain ordered content within their section.
 - Lessons may be preview or protected.
+- Protected lessons require enrollment to access.
+
+### Progress Tracking
+
 - Students must enroll before tracking progress.
-- Completing every lesson marks the enrollment as completed.
+- Only enrolled students can mark lessons as completed.
 - Only one completion record exists per lesson and student.
+- Completing all lessons marks the enrollment as completed.
+
+### Certificates
+
 - Certificates are generated only after completing a course.
 - Each student receives only one certificate per course.
 - Certificates can be publicly verified.
+
+### Activity & Analytics
+
+- Important platform events are recorded in the activity log.
+- Admin analytics are accessible only to administrators.
+- Revenue statistics are based on successful payments only.
+- Exported reports must respect applied filters and permissions.
+
 
 ## Security Notes
 
@@ -976,11 +1064,7 @@ coursehub-api/
 ## Planned Features
 
 * Notifications
-* Admin dashboard statistics
-* Password reset flow
 * Refresh tokens
-* Email verification
-* Swagger API documentation
 * Unit and integration tests
 * Docker support
 * CI/CD pipeline
