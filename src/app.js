@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
 
 const setupSwagger = require("./middleware/swagger.middleware");
 
@@ -38,6 +39,7 @@ app.use(
 
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));

@@ -30,7 +30,7 @@ const protect = asyncWrapper(async (req, res, next) => {
     if (error.name === "TokenExpiredError") {
       return next(
         new AppError(
-          "Authentication token has expired",
+          "Authentication token has expired. Please refresh your token.",
           401,
           httpStatusText.FAIL,
         ),
@@ -39,6 +39,13 @@ const protect = asyncWrapper(async (req, res, next) => {
 
     return next(
       new AppError("Invalid authentication token", 401, httpStatusText.FAIL),
+    );
+  }
+
+  // NEW: Verify token type is "access"
+  if (decodedToken.type !== "access") {
+    return next(
+      new AppError("Invalid token type", 401, httpStatusText.FAIL),
     );
   }
 
