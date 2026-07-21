@@ -5,6 +5,7 @@ const instructorEnrollmentTemplate = require("../templates/instructorEnrollment.
 const purchaseTemplate = require("../templates/purchase.template");
 const resetPasswordTemplate = require("../templates/resetPassword.template");
 const welcomeTemplate = require("../templates/welcome.template");
+const emailVerificationTemplate = require("../templates/emailVerification.template");
 
 const sendEmail = async ({ to, subject, html }) => {
   const transporter = createTransporter();
@@ -97,6 +98,16 @@ const sendCouponCreatedEmail = ({ admin, coupon }) =>
     }),
   });
 
+const sendVerificationEmail = ({ user, verificationUrl }) =>
+  sendEmail({
+    to: user.email,
+    subject: "Verify your CourseHub email",
+    html: emailVerificationTemplate({
+      firstName: user.firstName,
+      verificationUrl,
+    }),
+  });
+
 module.exports = {
   sendCertificateEmail,
   sendCouponCreatedEmail,
@@ -104,4 +115,5 @@ module.exports = {
   sendPurchaseEmail,
   sendResetPasswordEmail,
   sendWelcomeEmail,
+  sendVerificationEmail,
 };

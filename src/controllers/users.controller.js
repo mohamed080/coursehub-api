@@ -179,12 +179,46 @@ const updateMyPassword = asyncWrapper(async (req, res, next) => {
 const deactivateMyAccount = asyncWrapper(async (req, res) => {
   await User.findByIdAndUpdate(req.user._id, {
     isActive: false,
+    isDeleted: true,
   });
 
   res.status(200).json({
     status: httpStatusText.SUCCESS,
     message: "Account deactivated successfully",
     data: null,
+  });
+});
+
+const requestInstructorStatus = asyncWrapper(async (req, res, next) => {
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    return next(new AppError("User not found", 404, httpStatusText.FAIL));
+  }
+
+  if (user.role === "instructor") {
+    return next(
+      new AppError("You are already an instructor", 400, httpStatusText.FAIL)
+    );
+  }
+
+  if (user.instructorStatus === "pending") {
+    return next(
+      new AppError(
+        "Your instructor request is already pending approval",
+        400,
+        httpStatusText.FAIL
+      )
+    );
+  }
+
+  user.instructorStatus = "pending";
+  await user.save();
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    message: "Instructor request submitted successfully. Waiting for admin approval.",
+    data: { user: user.toSafeObject() },
   });
 });
 
@@ -356,6 +390,7 @@ module.exports = {
   updateMyProfile,
   updateMyPassword,
   deactivateMyAccount,
+  requestInstructorStatus,
   updateUserRole,
   deleteUser,
   updateMyAvatar,

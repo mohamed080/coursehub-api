@@ -113,6 +113,22 @@
  *       200:
  *         description: Avatar removed successfully
  *
+ * /api/users/me/request-instructor:
+ *   post:
+ *     tags:
+ *       - Users
+ *     summary: Request instructor status
+ *     description: Allows a regular user to request becoming an instructor. Sets instructorStatus to pending. Admin approval is required.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Instructor status request submitted successfully
+ *       400:
+ *         description: Already an instructor or request already pending
+ *       401:
+ *         description: Authentication required
+ *
  * /api/users:
  *   get:
  *     tags:

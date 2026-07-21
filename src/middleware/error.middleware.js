@@ -32,7 +32,7 @@ const globalErrorHandler = (err, req, res, next) => {
     status: statusText,
     message,
     code: statusCode,
-    data: null,
+    data: err.data || null,
     ...(process.env.NODE_ENV === "development" && {
       stack: err.stack,
     }),
