@@ -18,6 +18,8 @@ router.post(
   resendVerificationLimiter,
   authController.resendVerification,
 );
+router.post("/refresh", authController.refreshAccessToken);
+router.post("/logout", authController.logout);
 
 router.get("/me", protect, authController.getCurrentUser);
 

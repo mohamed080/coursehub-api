@@ -1,10 +1,19 @@
 const User = require("../models/user.model");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
 const asyncWrapper = require("../middleware/asyncWrapper");
 const AppError = require("../utils/appError");
 const httpStatusText = require("../utils/httpStatusText");
-const generateToken = require("../utils/generateToken");
+const {
+  generateTokens,
+  generateAccessToken,
+  generateRefreshToken,
+} = require("../utils/generateToken");
+const {
+  setRefreshTokenCookie,
+  clearRefreshTokenCookie,
+} = require("../utils/tokenHelper");
 const {
   sendResetPasswordEmail,
   sendWelcomeEmail,
@@ -126,21 +135,35 @@ const login = asyncWrapper(async (req, res, next) => {
         "Please verify your email address before logging in",
         403,
         httpStatusText.FAIL,
-        {email: user.email,
-          needVerification: true
-        },
+        { email: user.email, needVerification: true },
       ),
     );
   }
 
-  const token = generateToken(user._id);
+  const { accessToken, refreshToken } = generateTokens(user._id);
+
+  // Hash and save refresh token in database
+  const hashedRefreshToken = crypto
+    .createHash("sha256")
+    .update(refreshToken)
+    .digest("hex");
+
+  user.refreshToken = hashedRefreshToken;
+  user.refreshTokenExpires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  await user.save({
+    validateBeforeSave: false,
+  });
+
+  // Set refresh token in HttpOnly cookie
+  setRefreshTokenCookie(res, refreshToken);
 
   res.status(200).json({
     status: httpStatusText.SUCCESS,
     message: "Login successful",
     data: {
       user: user.toSafeObject(),
-      token,
+      accessToken,
     },
   });
 });
@@ -251,14 +274,31 @@ const resetPassword = asyncWrapper(async (req, res, next) => {
 
   await user.save();
 
-  const token = generateToken(user._id);
+  // Generate tokens
+  const { accessToken, refreshToken } = generateTokens(user._id);
+
+  // Hash and save refresh token in database
+  const hashedRefreshToken = crypto
+    .createHash("sha256")
+    .update(refreshToken)
+    .digest("hex");
+
+  user.refreshToken = hashedRefreshToken;
+  user.refreshTokenExpires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  await user.save({
+    validateBeforeSave: false,
+  });
+
+  // Set refresh token in HttpOnly cookie
+  setRefreshTokenCookie(res, refreshToken);
 
   res.status(200).json({
     status: httpStatusText.SUCCESS,
     message: "Password reset successfully",
     data: {
       user: user.toSafeObject(),
-      token,
+      accessToken,
     },
   });
 });
@@ -274,8 +314,8 @@ const verifyEmail = asyncWrapper(async (req, res, next) => {
     emailVerificationExpires: {
       $gt: Date.now(),
     },
-  }).select("+emailVerificationToken +emailVerificationExpires");   
-  
+  }).select("+emailVerificationToken +emailVerificationExpires");
+
   if (!user) {
     return next(
       new AppError(
@@ -285,8 +325,8 @@ const verifyEmail = asyncWrapper(async (req, res, next) => {
       ),
     );
   }
-  
-  if (user.emailVerified) {
+
+  if (user.isEmailVerified) {
     return next(
       new AppError("Email is already verified", 400, httpStatusText.FAIL),
     );
@@ -373,6 +413,132 @@ const resendVerification = asyncWrapper(async (req, res, next) => {
   });
 });
 
+const refreshAccessToken = asyncWrapper(async (req, res, next) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) {
+    return next(
+      new AppError("Refresh token not found", 401, httpStatusText.FAIL),
+    );
+  }
+
+  let decodedToken;
+
+  try {
+    decodedToken = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+  } catch (error) {
+    clearRefreshTokenCookie(res);
+    return next(
+      new AppError("Invalid or expired refresh token", 401, httpStatusText.FAIL),
+    );
+  }
+
+  if (decodedToken.type !== "refresh") {
+    return next(
+      new AppError("Invalid token type", 401, httpStatusText.FAIL),
+    );
+  }
+
+  // Fetch user with refresh token fields
+  const user = await User.findById(decodedToken.userId).select(
+    "+refreshToken +refreshTokenExpires"
+  );
+
+  if (!user || !user.isActive) {
+    clearRefreshTokenCookie(res);
+    return next(
+      new AppError(
+        "User not found or account is deactivated",
+        401,
+        httpStatusText.FAIL
+      )
+    );
+  }
+
+  if (!user.isEmailVerified) {
+    return next(
+      new AppError(
+        "Please verify your email before accessing resources",
+        403,
+        httpStatusText.FAIL
+      )
+    );
+  }
+
+  // Hash the received refresh token and compare with stored hash
+  const hashedRefreshToken = crypto
+    .createHash("sha256")
+    .update(refreshToken)
+    .digest("hex");
+
+  if (
+    user.refreshToken !== hashedRefreshToken ||
+    user.refreshTokenExpires < Date.now()
+  ) {
+    clearRefreshTokenCookie(res);
+    return next(
+      new AppError("Invalid or expired refresh token", 401, httpStatusText.FAIL),
+    );
+  }
+
+  // Generate new tokens
+  const newAccessToken = generateAccessToken(user._id);
+  const newRefreshToken = generateRefreshToken(user._id);
+
+  // Update refresh token in database
+  const newHashedRefreshToken = crypto
+    .createHash("sha256")
+    .update(newRefreshToken)
+    .digest("hex");
+
+  user.refreshToken = newHashedRefreshToken;
+  user.refreshTokenExpires = Date.now() + 7 * 24 * 60 * 60 * 1000;
+
+  await user.save({
+    validateBeforeSave: false,
+  });
+
+  // Set new refresh token in cookie
+  setRefreshTokenCookie(res, newRefreshToken);
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    message: "Access token refreshed successfully",
+    data: {
+      accessToken: newAccessToken,
+    },
+  });
+});
+
+const logout = asyncWrapper(async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (refreshToken) {
+    const hashedRefreshToken = crypto
+      .createHash("sha256")
+      .update(refreshToken)
+      .digest("hex");
+
+    await User.findOneAndUpdate(
+      {
+        refreshToken: hashedRefreshToken,
+      },
+      {
+        refreshToken: undefined,
+        refreshTokenExpires: undefined,
+      },
+    );
+  }
+
+  clearRefreshTokenCookie(res);
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    message: "Logged out successfully",
+    data: null,
+  });
+});
+
 module.exports = {
   forgotPassword,
   register,
@@ -381,4 +547,6 @@ module.exports = {
   resetPassword,
   verifyEmail,
   resendVerification,
+  refreshAccessToken,
+  logout,
 };

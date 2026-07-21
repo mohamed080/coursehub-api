@@ -8,7 +8,8 @@ A scalable RESTful API for an online learning platform built with Node.js, Expre
 
 * User registration and login
 * **Email verification** (users must verify their email before logging in)
-* JWT-based authentication
+* **Refresh token system** (access tokens expire in 15 minutes, refresh tokens in 7 days)
+* JWT-based authentication with access and refresh tokens
 * Get current authenticated user
 * Protected routes
 * Role-based authorization for users, instructors, and admins
@@ -270,6 +271,9 @@ MONGODB_URL=your_mongodb_connection_string
 JWT_SECRET=your_secure_jwt_secret
 JWT_EXPIRES_IN=1d
 
+JWT_REFRESH_SECRET=your_secure_refresh_token_secret
+REFRESH_TOKEN_EXPIRES_IN=7d
+
 CLIENT_URL=http://localhost:3000
 
 CLOUDINARY_CLOUD_NAME=your_cloud_name
@@ -354,6 +358,8 @@ If `role` is omitted, the account is created as `user`. Public registration only
 | POST | `/api/auth/resend-verification` | Resend verification email | No |
 | POST | `/api/auth/forgot-password` | Request password reset | No |
 | PATCH | `/api/auth/reset-password/:token` | Reset password | No |
+| POST | `/api/auth/refresh` | Refresh access token | No |
+| POST | `/api/auth/logout` | Logout user | Yes |
 | GET | `/api/auth/me` | Get current user | Yes |
 
 ### Users
@@ -942,6 +948,27 @@ coursehub-api/
 - A welcome email is sent only after successful email verification.
 - Deactivated accounts cannot log in.
 
+## Token Management
+
+### Access Token
+- **Duration:** 15 minutes
+- **Storage:** Memory or localStorage
+- **Header:** `Authorization: Bearer <accessToken>`
+- **Used for:** Authenticating API requests
+
+### Refresh Token
+- **Duration:** 7 days
+- **Storage:** HttpOnly secure cookie (automatic)
+- **Automatic renewal:** When access token expires
+- **Used for:** Obtaining new access tokens without re-login
+
+### Token Flow
+1. User logs in → receives `accessToken` (15m) + `refreshToken` (7d) in HttpOnly cookie
+2. User includes `accessToken` in API requests via Authorization header
+3. When `accessToken` expires → call `POST /api/auth/refresh` (sends `refreshToken` via cookie automatically)
+4. Receive new `accessToken` → retry original request
+5. User logs out → `refreshToken` cookie is cleared
+
 ### Authorization & User Management
 
 - Users may only manage their own profiles.
@@ -1060,11 +1087,19 @@ coursehub-api/
 * Rotate any credentials that are accidentally exposed.
 * Use a strong JWT secret in production.
 * Restrict CORS to trusted frontend domains in production.
+- Access tokens expire after 15 minutes.
+- Refresh tokens expire after 7 days.
+- Access tokens are stored in memory or localStorage on the client.
+- Refresh tokens are stored in HttpOnly secure cookies (cannot be accessed by JavaScript).
+- Users can refresh their access token without re-logging in using the `/api/auth/refresh` endpoint.
+- The refresh token endpoint automatically includes the refresh token via HttpOnly cookie.
+- Logging out clears the refresh token cookie.
+- Only valid access tokens with type "access" are accepted for protected routes.
+- Only valid refresh tokens with type "refresh" are accepted for token refresh.
 
 ## Planned Features
 
 * Notifications
-* Refresh tokens
 * Unit and integration tests
 * Docker support
 * CI/CD pipeline

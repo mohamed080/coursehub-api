@@ -207,4 +207,32 @@
  *         description: If an account exists, a verification email has been sent
  *       400:
  *         description: Email is already verified
+ *
+ * /api/auth/refresh:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Refresh access token
+ *     description: |
+ *       Generates a new access token using the refresh token stored in HttpOnly cookies.
+ *       The refresh token must be valid and not expired (valid for 7 days).
+ *     responses:
+ *       200:
+ *         description: New access token generated successfully
+ *       401:
+ *         description: Refresh token is invalid or expired
+ *
+ * /api/auth/logout:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Logout user
+ *     description: Clears the refresh token cookie and logs out the user.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ *       401:
+ *         description: Authentication required
  */
